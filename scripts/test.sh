@@ -8,3 +8,5 @@ xcodebuild \
   -destination 'platform=macOS' \
   -derivedDataPath .build/DerivedData \
   test
+
+./scripts/test-install.sh
