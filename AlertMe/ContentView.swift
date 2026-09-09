@@ -7,7 +7,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let error = appState.lastError {
+            if !isUITesting, let error = appState.lastError {
                 PermissionBanner(
                     title: "Alert Me could not complete that action",
                     message: error,
@@ -17,14 +17,14 @@ struct ContentView: View {
                 }
             }
 
-            if appState.notificationStatus == .notDetermined {
+            if !isUITesting, appState.notificationStatus == .notDetermined {
                 PermissionBanner(
                     title: "Allow notifications for backup alerts",
                     message: "Popup alerts work while Alert Me is running. Notifications provide a fallback if it is not.",
                     actionTitle: "Allow Notifications",
                     action: appState.requestNotificationAuthorization
                 )
-            } else if appState.notificationStatus == .denied {
+            } else if !isUITesting, appState.notificationStatus == .denied {
                 PermissionBanner(
                     title: "Notifications are turned off",
                     message: "Enable Alert Me in System Settings to receive fallback notifications.",
@@ -52,16 +52,16 @@ struct ContentView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                    alertSection(
-                        title: "Future",
-                        definitions: appState.futureDefinitions,
-                        emptyMessage: "No future alerts"
-                    )
-                    alertSection(
-                        title: "Past",
-                        definitions: appState.pastDefinitions,
-                        emptyMessage: "No past alerts"
-                    )
+                        alertSection(
+                            title: "Future",
+                            definitions: appState.futureDefinitions,
+                            emptyMessage: "No future alerts"
+                        )
+                        alertSection(
+                            title: "Past",
+                            definitions: appState.pastDefinitions,
+                            emptyMessage: "No past alerts"
+                        )
                     }
                 }
             }
@@ -85,6 +85,10 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showNewAlert)) { _ in
             editor = AlertEditorContext()
         }
+    }
+
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("--ui-testing")
     }
 
     @ViewBuilder

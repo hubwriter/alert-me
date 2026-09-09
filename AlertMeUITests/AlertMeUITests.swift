@@ -30,4 +30,35 @@ final class AlertMeUITests: XCTestCase {
         app.buttons["Delete"].click()
         XCTAssertTrue(app.staticTexts["No alerts"].waitForExistence(timeout: 2))
     }
+
+    @MainActor
+    func testCapturesReadmeScreenshot() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let marker = repositoryRoot.appendingPathComponent(
+            ".build/capture-readme-screenshot"
+        )
+        guard FileManager.default.fileExists(atPath: marker.path) else {
+            throw XCTSkip("README screenshot generation is opt-in.")
+        }
+
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+
+        app.buttons["createFirstAlertButton"].click()
+        let editor = app.descendants(matching: .textView)["messageEditor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 2))
+        editor.click()
+        editor.typeText("Dentist appointment")
+        app.buttons["saveAlertButton"].click()
+        XCTAssertTrue(app.staticTexts["Dentist appointment"].waitForExistence(timeout: 2))
+
+        let screenshot = app.windows.firstMatch.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = "alert-me-main-window"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }

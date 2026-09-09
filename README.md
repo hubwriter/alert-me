@@ -1,69 +1,130 @@
 # Alert Me
 
-Alert Me is a native macOS 26 Tahoe app for one-time and recurring popup alerts.
+Alert Me is a native macOS 26 Tahoe app for one-time and recurring popup alerts. It stays available from the menu bar, presents due alerts above other apps, and can use macOS notifications as a fallback.
 
-## Getting started
+![Alert Me showing a scheduled alert](docs/images/alert-me-main-window.png)
 
-Open `AlertMe.xcodeproj` in Xcode 26.6 or later, select the `AlertMe` scheme, and run the app.
+## Requirements
 
-To install Alert Me as a normal app that can be opened without starting Xcode:
+- macOS 26 Tahoe
+- Xcode 26.6 or later to build the app
+
+Xcode is required only to build or update Alert Me from this repository. After installation, Alert Me runs as a standalone application without Xcode being open.
+
+## Install and run as a standalone Mac app
+
+From the repository root, run:
 
 ```shell
 ./scripts/install.sh
 ```
 
-This creates `~/Applications/Alert Me.app` and asks Spotlight to index it. After installation, press <kbd>Command</kbd>+<kbd>Space</kbd>, search for **Alert Me**, and open it like any other Mac app. To install and open it in one command:
+The installer:
+
+1. Builds a Release version of Alert Me.
+2. Installs it as `~/Applications/Alert Me.app`.
+3. Registers it with macOS Launch Services.
+4. Asks Spotlight to index it.
+
+After installation, start Alert Me using any standard macOS method:
+
+- Press <kbd>Command</kbd>+<kbd>Space</kbd>, search for **Alert Me**, and press <kbd>Enter</kbd>.
+- Open `~/Applications` in Finder and double-click **Alert Me**.
+- Run:
+
+  ```shell
+  open "$HOME/Applications/Alert Me.app"
+  ```
+
+To install and launch the app in one command:
 
 ```shell
 ./scripts/install.sh --open
 ```
 
-Run the installer again whenever you want to replace the installed app with the latest source code.
+Alert Me does not appear in the Dock by default. Use its alarm-clock icon in the menu bar to reopen the main window, open Settings, or quit. To show the app in the Dock, enable **Show Alert Me in the Dock** under **Alert Me > Settings**.
 
-To use fallback notifications, the app must have a valid development signature:
+### Install an updated build
+
+After pulling or making changes, run `./scripts/install.sh` again. The installer replaces the installed app with the latest Release build. Existing alert data and preferences are stored separately and are not removed.
+
+### Spotlight troubleshooting
+
+The installer registers and indexes the app automatically. If Spotlight does not show Alert Me immediately:
+
+1. Confirm that `~/Applications/Alert Me.app` exists.
+2. Wait briefly for Spotlight to refresh.
+3. Run `./scripts/install.sh` again.
+4. Open the app directly with `open "$HOME/Applications/Alert Me.app"`.
+
+## Notification signing
+
+Popup alerts work while Alert Me is running. Fallback macOS notifications require a valid development or distribution signature. A build signed only with **Sign to Run Locally** may be unable to request notification permission.
+
+For local notification testing:
 
 1. Open **Xcode > Settings > Accounts** and add your Apple ID.
 2. Select the `AlertMe` project and the `AlertMe` target.
 3. Under **Signing & Capabilities**, select your Development Team.
-4. Rebuild the app and copy the newly signed `AlertMe.app` into `/Applications`.
-5. Open the installed app and select **Allow Notifications**.
+4. Run `./scripts/install.sh` again.
+5. Open Alert Me and select **Allow Notifications**.
 
-Popup alert windows continue to work while Alert Me is running even if notification permission is unavailable.
+Sharing the app with other people requires a Developer ID signature and Apple notarization. A locally signed build is intended only for the Mac that built it.
+
+## Features
+
+- Create one-time, daily, weekly, monthly, or yearly alerts.
+- Enter messages of up to 500 characters.
+- Fire alerts at second zero as soon as the selected minute begins.
+- Set dates and times independently, or use **Now** to copy the current date and time.
+- Display one-time alert dates as `09 September 2026`.
+- Choose one app-wide macOS system sound or make individual alerts silent.
+- Repeat the sound every five seconds, up to 20 additional times, until dismissal.
+- Keep running when the management window is closed.
+- Optionally open at login and appear in the Dock.
+- Choose Light or Dark mode, with Light mode as the default.
+- Edit, enable, disable, or immediately delete alert definitions.
+
+Missed alerts are recorded but are not replayed after the Mac wakes or the app reopens. Explicitly quitting or force-quitting Alert Me prevents popup alerts until it is opened again. Fallback notifications are delayed briefly and canceled when the app successfully presents its popup.
 
 ## Development
 
-Run the complete test suite after every code or project change:
+Open `AlertMe.xcodeproj`, select the `AlertMe` scheme, and run the app.
+
+Run the complete test suite after every Swift, test, project configuration, script, or app behavior change:
 
 ```shell
 ./scripts/test.sh
 ```
 
-The app uses SwiftUI, AppKit, SwiftData, UserNotifications, and ServiceManagement.
+The suite includes:
 
-## Behavior
+- Scheduling and recurrence tests, including DST, leap-year, and calendar boundaries.
+- Validation and date-format tests.
+- SwiftData persistence integration tests.
+- Notification authorization and fallback policy tests.
+- Sound repetition and cancellation tests.
+- App setting persistence tests.
+- AppKit alert panel tests.
+- UI tests for the empty state and alert creation and deletion.
+- An isolated integration test for the standalone installer.
 
-- Create one-time, daily, weekly, monthly, or yearly alerts.
-- Enter messages of up to 500 characters.
-- Fire alerts at second zero as soon as the selected minute begins.
-- Set dates and times independently in the alert editor, or use **Now** to copy the current date and time.
-- Display one-time alert dates as `09 September 2026`.
-- Choose the app-wide default macOS system sound under **Alert Me > Settings**. Individual alerts can be silent.
-- Close the management window without stopping scheduled alerts.
-- Enable **Open Alert Me at login** in Settings for improved reliability.
-- Keep Alert Me out of the Dock by default, or enable **Show Alert Me in the Dock** in Settings.
-- Use Light mode by default, with a Light/Dark choice under **Alert Me > Settings**.
+Regenerate the privacy-safe README screenshot with:
 
-When a non-silent popup appears, Alert Me plays the selected sound immediately and then every five seconds up to 20 additional times. Dismissing the popup stops the sequence. Deleting an alert takes effect immediately without a confirmation dialog.
+```shell
+./scripts/capture-readme-screenshot.sh
+```
 
-Missed alerts are recorded but are not replayed after the Mac wakes or the app reopens. Explicitly quitting or force-quitting the app prevents popup alerts until it is opened again. A fallback notification is delayed briefly and canceled when the app popup appears, so both are not intentionally displayed for the same occurrence. Fallback notifications use the default notification sound because macOS notification sounds must be bundled with the app.
+The app uses SwiftUI, AppKit, SwiftData, UserNotifications, and ServiceManagement with Swift 6 strict concurrency.
 
 ## Manual verification
 
-Some operating-system integrations cannot be verified reliably in automated tests:
+Some operating-system integrations require testing on a real Mac:
 
 1. Grant and deny notification permission, then confirm the Settings guidance.
 2. Run a signed app bundle and verify launch-at-login registration.
 3. Confirm the alert panel appears over other apps, Spaces, and full-screen apps.
 4. Put the Mac to sleep across an alert time and confirm the missed alert is not replayed.
 5. Confirm explicitly quitting the app stops popup alerts until relaunch.
-6. Preview each listed system sound and confirm silent alerts do not play it.
+6. Preview the available system sounds and confirm silent alerts do not play them.
+7. Confirm Spotlight finds the installed app and the menu-bar controls remain available while the Dock icon is hidden.
