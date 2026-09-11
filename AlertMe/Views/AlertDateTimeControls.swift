@@ -2,27 +2,49 @@ import SwiftUI
 
 struct AlertDateTimeControls: View {
     @Binding var selection: Date
+    @Binding var weekdayMask: Int
+    let recurrence: RecurrenceKind
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Date")
-                    .font(.headline)
-                HStack(spacing: 6) {
-                    TextField("DD/MM/YYYY", value: dateBinding, formatter: Self.dateFormatter)
-                        .frame(width: 112)
-                        .accessibilityIdentifier("alertDateField")
-                    Stepper(
-                        "Change date",
-                        onIncrement: {
-                            selection = AlertDateEditing.addingDays(1, to: selection)
-                        },
-                        onDecrement: {
-                            selection = AlertDateEditing.addingDays(-1, to: selection)
+            if recurrence == .weekly {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Day")
+                        .font(.headline)
+                    Picker("Day", selection: weekdayBinding) {
+                        ForEach(WeekdayMask.calendarWeekdaysMondayFirst, id: \.self) { weekday in
+                            Text(Calendar.current.weekdaySymbols[weekday - 1])
+                                .tag(weekday)
                         }
-                    )
+                    }
                     .labelsHidden()
-                    .accessibilityIdentifier("alertDateStepper")
+                    .frame(width: 140)
+                    .accessibilityIdentifier("alertWeekdayPicker")
+                }
+            } else if recurrence != .daily {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Date")
+                        .font(.headline)
+                    HStack(spacing: 6) {
+                        TextField("DD/MM/YYYY", value: dateBinding, formatter: Self.dateFormatter)
+                            .frame(width: 112)
+                            .accessibilityIdentifier("alertDateField")
+                        Stepper(
+                            "Change date",
+                            onIncrement: {
+                                selection = AlertDateEditing.addingDays(1, to: selection)
+                            },
+                            onDecrement: {
+                                selection = AlertDateEditing.addingDays(-1, to: selection)
+                            }
+                        )
+                        .labelsHidden()
+                        .accessibilityIdentifier("alertDateStepper")
+
+                        if recurrence == .oneTime {
+                            WeekdayLabel(date: selection)
+                        }
+                    }
                 }
             }
 
@@ -47,10 +69,12 @@ struct AlertDateTimeControls: View {
                 }
             }
 
-            Button("Now") {
-                selection = AlertDateEditing.startOfMinute(Date())
+            if recurrence != .daily {
+                Button("Now") {
+                    selection = AlertDateEditing.startOfMinute(Date())
+                }
+                .accessibilityIdentifier("alertNowButton")
             }
-            .accessibilityIdentifier("alertNowButton")
         }
     }
 
@@ -72,6 +96,23 @@ struct AlertDateTimeControls: View {
         )
     }
 
+    private var weekdayBinding: Binding<Int> {
+        Binding(
+            get: {
+                WeekdayMask.calendarWeekdaysMondayFirst.first {
+                    WeekdayMask.contains(weekdayMask, calendarWeekday: $0)
+                } ?? Calendar.current.component(.weekday, from: Date())
+            },
+            set: {
+                weekdayMask = WeekdayMask.value(for: $0)
+            }
+        )
+    }
+
+    static func weekdayName(for date: Date, calendar: Calendar = .current) -> String {
+        calendar.weekdaySymbols[calendar.component(.weekday, from: date) - 1]
+    }
+
     static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -88,4 +129,24 @@ struct AlertDateTimeControls: View {
         formatter.isLenient = false
         return formatter
     }()
+}
+
+private struct WeekdayLabel: View {
+    let date: Date
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            ForEach(Array(Calendar.current.weekdaySymbols.enumerated()), id: \.offset) {
+                _,
+                weekday in
+                Text(weekday)
+                    .hidden()
+            }
+
+            Text(AlertDateTimeControls.weekdayName(for: date))
+                .lineLimit(1)
+                .accessibilityIdentifier("alertSelectedWeekday")
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
 }

@@ -4,6 +4,28 @@ import Testing
 
 struct AlertDraftTests {
     @Test
+    func weeklyDefaultUsesCurrentWeekdayWhenDefaultTimeCrossesMidnight() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let sunday = try #require(
+            calendar.date(
+                from: DateComponents(
+                    year: 2026,
+                    month: 9,
+                    day: 13,
+                    hour: 23,
+                    minute: 58
+                )
+            )
+        )
+
+        let draft = AlertDraft(now: sunday, calendar: calendar)
+
+        #expect(draft.weekdayMask == WeekdayMask.value(for: 1))
+        #expect(calendar.component(.weekday, from: draft.scheduledDate) == 2)
+    }
+
+    @Test
     func snapshotDropsSecondsFromSelectedTime() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -11,7 +11,7 @@ struct AlertDraft: Equatable, Sendable {
     init(now: Date = Date(), calendar: Calendar = .current) {
         let proposedDate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
         scheduledDate = proposedDate
-        let weekday = calendar.component(.weekday, from: proposedDate)
+        let weekday = calendar.component(.weekday, from: now)
         weekdayMask = WeekdayMask.value(for: weekday)
     }
 
@@ -45,6 +45,8 @@ struct AlertDraft: Equatable, Sendable {
 }
 
 enum WeekdayMask {
+    static let calendarWeekdaysMondayFirst = Array(2...7) + [1]
+
     static func value(for calendarWeekday: Int) -> Int {
         1 << (calendarWeekday - 1)
     }

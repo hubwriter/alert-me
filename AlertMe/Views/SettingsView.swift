@@ -38,7 +38,6 @@ struct SettingsView: View {
 
             Section("Reliability") {
                 Toggle("Open Alert Me at login", isOn: launchAtLoginBinding)
-                Toggle("Show Alert Me in the Dock", isOn: showInDockBinding)
                 if appState.loginItemState == .requiresApproval {
                     Text("Approval is required in System Settings > General > Login Items.")
                         .foregroundStyle(.orange)
@@ -85,15 +84,6 @@ struct SettingsView: View {
             get: { appState.loginItemState == .enabled },
             set: { enabled in
                 appState.setLaunchAtLogin(enabled)
-            }
-        )
-    }
-
-    private var showInDockBinding: Binding<Bool> {
-        Binding(
-            get: { settings.showsDockIcon },
-            set: { showsDockIcon in
-                appState.setShowsDockIcon(showsDockIcon)
             }
         )
     }
