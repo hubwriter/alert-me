@@ -34,7 +34,6 @@ enum AppColorMode: String, CaseIterable, Identifiable, Sendable {
 final class AppSettings: ObservableObject {
     private enum Key {
         static let soundName = "soundName"
-        static let showsDockIcon = "showsDockIcon"
         static let colorMode = "colorMode"
     }
 
@@ -43,12 +42,6 @@ final class AppSettings: ObservableObject {
     @Published var soundName: String {
         didSet {
             defaults.set(soundName, forKey: Key.soundName)
-        }
-    }
-
-    @Published var showsDockIcon: Bool {
-        didSet {
-            defaults.set(showsDockIcon, forKey: Key.showsDockIcon)
         }
     }
 
@@ -71,7 +64,6 @@ final class AppSettings: ObservableObject {
         soundName = savedName.flatMap { sounds.contains($0) ? $0 : nil }
             ?? sounds.first
             ?? "Glass"
-        showsDockIcon = defaults.bool(forKey: Key.showsDockIcon)
         colorMode = defaults.string(forKey: Key.colorMode)
             .flatMap(AppColorMode.init(rawValue:))
             ?? .light
@@ -81,12 +73,6 @@ final class AppSettings: ObservableObject {
         SystemSoundService.play(named: soundName)
     }
 
-    func applyDockIconPreference() {
-        let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
-        NSApplication.shared.setActivationPolicy(
-            showsDockIcon || isUITesting ? .regular : .accessory
-        )
-    }
 }
 
 enum SystemSoundService {

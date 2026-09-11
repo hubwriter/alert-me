@@ -48,11 +48,11 @@ struct AlertEditorView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("recurrencePicker")
 
-            AlertDateTimeControls(selection: $draft.scheduledDate)
-
-            if draft.recurrence == .weekly {
-                WeekdayPicker(selection: $draft.weekdayMask)
-            }
+            AlertDateTimeControls(
+                selection: $draft.scheduledDate,
+                weekdayMask: $draft.weekdayMask,
+                recurrence: draft.recurrence
+            )
 
             if let error = validation.scheduleError {
                 ValidationMessage(error)
@@ -98,33 +98,6 @@ struct AlertEditorView: View {
             get: { !draft.isSilent },
             set: { draft.isSilent = !$0 }
         )
-    }
-}
-
-private struct WeekdayPicker: View {
-    @Binding var selection: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Repeat on")
-                .font(.headline)
-
-            HStack {
-                ForEach(Array(Calendar.current.veryShortWeekdaySymbols.enumerated()), id: \.offset) {
-                    index,
-                    symbol in
-                    let weekday = index + 1
-                    let isSelected = WeekdayMask.contains(selection, calendarWeekday: weekday)
-                    Button(symbol) {
-                        selection ^= WeekdayMask.value(for: weekday)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(isSelected ? .accentColor : .secondary)
-                    .accessibilityLabel(Calendar.current.weekdaySymbols[index])
-                    .accessibilityValue(isSelected ? "Selected" : "Not selected")
-                }
-            }
-        }
     }
 }
 

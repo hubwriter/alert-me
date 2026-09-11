@@ -42,7 +42,7 @@ To install and launch the app in one command:
 ./scripts/install.sh --open
 ```
 
-Alert Me does not appear in the Dock by default. Use its alarm-clock icon in the menu bar to reopen the main window, open Settings, or quit. To show the app in the Dock, enable **Show Alert Me in the Dock** under **Alert Me > Settings**.
+Alert Me appears in the Dock and Command+Tab application switcher whenever one of its windows is visible. Closing its windows hides it from the Dock and application switcher while it continues running in the menu bar so alerts can still appear.
 
 ### Install an updated build
 
@@ -81,7 +81,8 @@ Sharing the app with other people requires a Developer ID signature and Apple no
 - Choose one app-wide macOS system sound or make individual alerts silent.
 - Repeat the sound every five seconds, up to 20 additional times, until dismissal.
 - Keep running when the management window is closed.
-- Optionally open at login and appear in the Dock.
+- Optionally open at login.
+- Appear in the Dock and Command+Tab application switcher while a window is visible.
 - Choose Light or Dark mode, with Light mode as the default.
 - Edit, enable, disable, or immediately delete alert definitions.
 
@@ -127,4 +128,5 @@ Some operating-system integrations require testing on a real Mac:
 4. Put the Mac to sleep across an alert time and confirm the missed alert is not replayed.
 5. Confirm explicitly quitting the app stops popup alerts until relaunch.
 6. Preview the available system sounds and confirm silent alerts do not play them.
-7. Confirm Spotlight finds the installed app and the menu-bar controls remain available while the Dock icon is hidden.
+7. Confirm the app appears in the Dock and Command+Tab application switcher while a window is visible.
+8. Close all app windows and confirm the process and menu-bar controls remain available while the Dock icon is hidden.

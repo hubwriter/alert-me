@@ -63,10 +63,12 @@ private struct MenuBarView: View {
 
     var body: some View {
         Button("Open Alert Me") {
+            AppActivationPolicy.prepareToShowWindow()
             openWindow(id: "main")
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
         Button("Settings…") {
+            AppActivationPolicy.prepareToShowWindow()
             openSettings()
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
@@ -83,6 +85,7 @@ private struct AlertCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button("New Alert") {
+                AppActivationPolicy.prepareToShowWindow()
                 openWindow(id: "main")
                 Task { @MainActor in
                     await Task.yield()

@@ -53,7 +53,6 @@ final class AlertAppState: NSObject, ObservableObject {
             return
         }
         didStart = true
-        settings.applyDockIconPreference()
         UNUserNotificationCenter.current().delegate = self
         installLifecycleObservers()
         Task {
@@ -141,11 +140,6 @@ final class AlertAppState: NSObject, ObservableObject {
             lastError = error.localizedDescription
             loginItemState = loginItemService.state
         }
-    }
-
-    func setShowsDockIcon(_ showsDockIcon: Bool) {
-        settings.showsDockIcon = showsDockIcon
-        settings.applyDockIconPreference()
     }
 
     func refreshAuthorizationAfterReturningFromSettings() async {
