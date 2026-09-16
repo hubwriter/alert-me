@@ -24,7 +24,7 @@ struct AlertMeApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Alert Me", id: "main") {
+        Window("Alert Me", id: "main") {
             ContentView()
                 .environmentObject(appState)
                 .environmentObject(appState.settings)

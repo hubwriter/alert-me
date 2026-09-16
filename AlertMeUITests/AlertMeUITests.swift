@@ -11,6 +11,20 @@ final class AlertMeUITests: XCTestCase {
     }
 
     @MainActor
+    func testRepeatedOpenCommandsReuseMainWindow() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+
+        XCTAssertTrue(app.windows["Alert Me"].waitForExistence(timeout: 3))
+
+        app.typeKey("n", modifierFlags: .command)
+        app.typeKey("n", modifierFlags: .command)
+
+        XCTAssertEqual(app.windows.matching(identifier: "Alert Me").count, 1)
+    }
+
+    @MainActor
     func testCreatesAndDeletesOneTimeAlert() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
@@ -90,4 +104,5 @@ final class AlertMeUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
 }
