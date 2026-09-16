@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct AlertDateTimeControls: View {
@@ -26,9 +27,13 @@ struct AlertDateTimeControls: View {
                     Text("Date")
                         .font(.headline)
                     HStack(spacing: 6) {
-                        TextField("DD/MM/YYYY", value: dateBinding, formatter: Self.dateFormatter)
+                        ArrowSteppingDateField(
+                            selection: $selection,
+                            formatter: Self.dateFormatter,
+                            components: [.day, .month, .year],
+                            accessibilityIdentifier: "alertDateField"
+                        )
                             .frame(width: 112)
-                            .accessibilityIdentifier("alertDateField")
                         Stepper(
                             "Change date",
                             onIncrement: {
@@ -52,9 +57,13 @@ struct AlertDateTimeControls: View {
                 Text("Time")
                     .font(.headline)
                 HStack(spacing: 6) {
-                    TextField("Time", value: timeBinding, formatter: Self.timeFormatter)
+                    ArrowSteppingDateField(
+                        selection: $selection,
+                        formatter: Self.timeFormatter,
+                        components: [.hour, .minute],
+                        accessibilityIdentifier: "alertTimeField"
+                    )
                         .frame(width: 96)
-                        .accessibilityIdentifier("alertTimeField")
                     Stepper(
                         "Change time",
                         onIncrement: {
@@ -129,6 +138,108 @@ struct AlertDateTimeControls: View {
         formatter.isLenient = false
         return formatter
     }()
+}
+
+private struct ArrowSteppingDateField: NSViewRepresentable {
+    @Binding var selection: Date
+    let formatter: DateFormatter
+    let components: [AlertDateComponent]
+    let accessibilityIdentifier: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            selection: $selection,
+            formatter: formatter,
+            components: components
+        )
+    }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = NSTextField()
+        field.delegate = context.coordinator
+        field.formatter = formatter
+        field.objectValue = selection
+        field.identifier = NSUserInterfaceItemIdentifier(accessibilityIdentifier)
+        return field
+    }
+
+    func updateNSView(_ field: NSTextField, context: Context) {
+        context.coordinator.selection = $selection
+        if field.currentEditor() == nil {
+            field.objectValue = selection
+        }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var selection: Binding<Date>
+        private let formatter: DateFormatter
+        private let components: [AlertDateComponent]
+
+        init(
+            selection: Binding<Date>,
+            formatter: DateFormatter,
+            components: [AlertDateComponent]
+        ) {
+            self.selection = selection
+            self.formatter = formatter
+            self.components = components
+        }
+
+        func control(
+            _ control: NSControl,
+            textView: NSTextView,
+            doCommandBy commandSelector: Selector
+        ) -> Bool {
+            let amount: Int
+            switch commandSelector {
+            case #selector(NSResponder.moveUp(_:)):
+                amount = 1
+            case #selector(NSResponder.moveDown(_:)):
+                amount = -1
+            default:
+                return false
+            }
+
+            let caretLocation = textView.selectedRange().location
+            guard let component = AlertDateEditing.component(
+                atCaretLocation: caretLocation,
+                in: textView.string,
+                components: components
+            ) else {
+                return false
+            }
+
+            selection.wrappedValue = AlertDateEditing.stepping(
+                component,
+                by: amount,
+                in: selection.wrappedValue
+            )
+            textView.string = formatter.string(from: selection.wrappedValue)
+            textView.setSelectedRange(
+                NSRange(location: min(caretLocation, textView.string.utf16.count), length: 0)
+            )
+            return true
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField,
+                  let date = field.objectValue as? Date else {
+                return
+            }
+            if components.contains(.day) {
+                selection.wrappedValue = AlertDateEditing.replacingDate(
+                    in: selection.wrappedValue,
+                    with: date
+                )
+            } else {
+                selection.wrappedValue = AlertDateEditing.replacingTime(
+                    in: selection.wrappedValue,
+                    with: date
+                )
+            }
+        }
+    }
 }
 
 private struct WeekdayLabel: View {
