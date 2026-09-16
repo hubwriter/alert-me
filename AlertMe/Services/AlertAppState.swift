@@ -153,15 +153,41 @@ final class AlertAppState: NSObject, ObservableObject {
     }
 
     var futureDefinitions: [AlertDefinition] {
-        definitions.filter {
-            $0.recurrence != .oneTime || ($0.oneTimeDate ?? .distantPast) > Date()
-        }
+        futureDefinitions(relativeTo: Date())
     }
 
     var pastDefinitions: [AlertDefinition] {
-        definitions.filter {
-            $0.recurrence == .oneTime && ($0.oneTimeDate ?? .distantPast) <= Date()
-        }
+        pastDefinitions(relativeTo: Date())
+    }
+
+    func futureDefinitions(relativeTo now: Date) -> [AlertDefinition] {
+        Self.futureDefinitions(from: definitions, relativeTo: now)
+    }
+
+    func pastDefinitions(relativeTo now: Date) -> [AlertDefinition] {
+        Self.pastDefinitions(from: definitions, relativeTo: now)
+    }
+
+    static func futureDefinitions(
+        from definitions: [AlertDefinition],
+        relativeTo now: Date
+    ) -> [AlertDefinition] {
+        definitions
+            .filter {
+                $0.recurrence != .oneTime || ($0.oneTimeDate ?? .distantPast) > now
+            }
+            .sorted(by: Self.futureDisplayOrder)
+    }
+
+    static func pastDefinitions(
+        from definitions: [AlertDefinition],
+        relativeTo now: Date
+    ) -> [AlertDefinition] {
+        definitions
+            .filter {
+                $0.recurrence == .oneTime && ($0.oneTimeDate ?? .distantPast) <= now
+            }
+            .sorted(by: Self.pastDisplayOrder)
     }
 
     private func saveAndReconcile() {
@@ -450,6 +476,43 @@ final class AlertAppState: NSObject, ObservableObject {
             rhs.createdAt,
             rhs.id.uuidString
         )
+    }
+
+    private static func futureDisplayOrder(
+        _ lhs: AlertDefinition,
+        _ rhs: AlertDefinition
+    ) -> Bool {
+        (
+            displayDate(for: lhs),
+            lhs.createdAt,
+            lhs.id.uuidString
+        ) < (
+            displayDate(for: rhs),
+            rhs.createdAt,
+            rhs.id.uuidString
+        )
+    }
+
+    private static func pastDisplayOrder(
+        _ lhs: AlertDefinition,
+        _ rhs: AlertDefinition
+    ) -> Bool {
+        (
+            displayDate(for: lhs),
+            lhs.createdAt,
+            lhs.id.uuidString
+        ) > (
+            displayDate(for: rhs),
+            rhs.createdAt,
+            rhs.id.uuidString
+        )
+    }
+
+    private static func displayDate(for definition: AlertDefinition) -> Date {
+        if definition.recurrence == .oneTime {
+            return definition.oneTimeDate ?? .distantFuture
+        }
+        return definition.nextOccurrenceAt ?? .distantFuture
     }
 }
 
