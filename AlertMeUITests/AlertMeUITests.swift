@@ -11,6 +11,20 @@ final class AlertMeUITests: XCTestCase {
     }
 
     @MainActor
+    func testRepeatedOpenCommandsReuseMainWindow() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+
+        XCTAssertTrue(app.windows["Alert Me"].waitForExistence(timeout: 3))
+
+        app.typeKey("n", modifierFlags: .command)
+        app.typeKey("n", modifierFlags: .command)
+
+        XCTAssertEqual(app.windows.matching(identifier: "Alert Me").count, 1)
+    }
+
+    @MainActor
     func testCreatesAndDeletesOneTimeAlert() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
@@ -61,6 +75,50 @@ final class AlertMeUITests: XCTestCase {
     }
 
     @MainActor
+    func testEditsDateAndTimeByTypingSteppersAndArrowKeys() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+
+        app.buttons["createFirstAlertButton"].click()
+        let dateField = app.textFields["alertDateField"]
+        let timeField = app.textFields["alertTimeField"]
+        XCTAssertTrue(dateField.waitForExistence(timeout: 2))
+        XCTAssertTrue(timeField.waitForExistence(timeout: 2))
+
+        replaceValue(in: dateField, with: "20/09/2026")
+        replaceValue(in: timeField, with: "14:30")
+        XCTAssertEqual(dateField.value as? String, "20/09/2026")
+        XCTAssertEqual(timeField.value as? String, "14:30")
+
+        let dateIncrement = app.steppers["alertDateStepper"]
+            .descendants(matching: .incrementArrow)
+            .firstMatch
+        let timeDecrement = app.steppers["alertTimeStepper"]
+            .descendants(matching: .decrementArrow)
+            .firstMatch
+        XCTAssertTrue(dateIncrement.waitForExistence(timeout: 2))
+        XCTAssertTrue(timeDecrement.waitForExistence(timeout: 2))
+        dateIncrement.click()
+        timeDecrement.click()
+        XCTAssertEqual(dateField.value as? String, "21/09/2026")
+        XCTAssertEqual(timeField.value as? String, "14:29")
+
+        dateField.click()
+        dateField.typeKey("a", modifierFlags: .command)
+        dateField.typeKey(.leftArrow, modifierFlags: [])
+        dateField.typeKey(.downArrow, modifierFlags: [])
+
+        timeField.click()
+        timeField.typeKey("a", modifierFlags: .command)
+        timeField.typeKey(.rightArrow, modifierFlags: [])
+        timeField.typeKey(.upArrow, modifierFlags: [])
+
+        XCTAssertEqual(dateField.value as? String, "20/09/2026")
+        XCTAssertEqual(timeField.value as? String, "14:30")
+    }
+
+    @MainActor
     func testCapturesReadmeScreenshot() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -90,4 +148,13 @@ final class AlertMeUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    @MainActor
+    private func replaceValue(in field: XCUIElement, with value: String) {
+        field.click()
+        field.typeKey("a", modifierFlags: .command)
+        field.typeText(value)
+        field.typeKey(.tab, modifierFlags: [])
+    }
+
 }

@@ -110,9 +110,12 @@ final class AlertAppState: NSObject, ObservableObject {
     }
 
     func delete(_ definition: AlertDefinition) {
+        let pendingNotificationIdentifier = definition.nextOccurrenceAt.map {
+            notificationIdentifier(for: definition.id, occurrence: $0)
+        }
         presenter.removeQueued(definitionID: definition.id)
         context.delete(definition)
-        saveAndReconcile()
+        saveAndReconcile(removingPendingNotification: pendingNotificationIdentifier)
     }
 
     func requestNotificationAuthorization() {
@@ -190,11 +193,14 @@ final class AlertAppState: NSObject, ObservableObject {
             .sorted(by: Self.pastDisplayOrder)
     }
 
-    private func saveAndReconcile() {
+    private func saveAndReconcile(removingPendingNotification identifier: String? = nil) {
         do {
             try context.save()
             refreshDefinitions()
             Task {
+                if let identifier {
+                    await notificationScheduler.removePendingNotification(identifier: identifier)
+                }
                 await reconcile(markElapsedAsMissed: true)
             }
         } catch {
@@ -384,7 +390,7 @@ final class AlertAppState: NSObject, ObservableObject {
                         for: alert.definitionID,
                         occurrence: alert.occurrence
                     )
-                    notificationScheduler.removePendingNotification(identifier: identifier)
+                    await notificationScheduler.removePendingNotification(identifier: identifier)
                     notificationScheduler.removeDeliveredNotification(identifier: identifier)
                 }
             }
