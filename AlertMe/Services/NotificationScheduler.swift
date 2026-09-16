@@ -38,11 +38,30 @@ enum NotificationAuthorizationGuidance {
 }
 
 @MainActor
+final class NotificationMutationQueue {
+    private var pendingMutation: Task<Void, any Error>?
+
+    func perform(
+        _ mutation: @escaping @MainActor () async throws -> Void
+    ) async throws {
+        let previousMutation = pendingMutation
+        let task = Task { @MainActor in
+            if let previousMutation {
+                _ = try? await previousMutation.value
+            }
+            try await mutation()
+        }
+        pendingMutation = task
+        try await task.value
+    }
+}
+
+@MainActor
 protocol NotificationScheduling {
     func authorizationStatus() async -> UNAuthorizationStatus
     func requestAuthorization() async throws -> Bool
     func replaceManagedNotifications(with descriptors: [NotificationDescriptor]) async throws
-    func removePendingNotification(identifier: String)
+    func removePendingNotification(identifier: String) async
     func removeDeliveredNotification(identifier: String)
 }
 
@@ -50,6 +69,7 @@ protocol NotificationScheduling {
 final class NotificationScheduler: NotificationScheduling {
     private let center: UNUserNotificationCenter
     private let identifierPrefix = "alert."
+    private let mutationQueue = NotificationMutationQueue()
 
     init(center: UNUserNotificationCenter = .current()) {
         self.center = center
@@ -76,12 +96,36 @@ final class NotificationScheduler: NotificationScheduling {
     }
 
     func replaceManagedNotifications(with descriptors: [NotificationDescriptor]) async throws {
+        try await mutationQueue.perform { [center, identifierPrefix] in
+            try await Self.replaceManagedNotifications(
+                with: descriptors,
+                center: center,
+                identifierPrefix: identifierPrefix
+            )
+        }
+    }
+
+    func removePendingNotification(identifier: String) async {
+        _ = try? await mutationQueue.perform { [center] in
+            center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        }
+    }
+
+    func removeDeliveredNotification(identifier: String) {
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+    }
+
+    private static func replaceManagedNotifications(
+        with descriptors: [NotificationDescriptor],
+        center: UNUserNotificationCenter,
+        identifierPrefix: String
+    ) async throws {
         let managedIdentifiers: [String] = await withCheckedContinuation { continuation in
             center.getPendingNotificationRequests { requests in
                 continuation.resume(
                     returning: requests
                         .map(\.identifier)
-                        .filter { $0.hasPrefix(self.identifierPrefix) }
+                        .filter { $0.hasPrefix(identifierPrefix) }
                 )
             }
         }
@@ -117,13 +161,5 @@ final class NotificationScheduler: NotificationScheduling {
                 }
             }
         }
-    }
-
-    func removePendingNotification(identifier: String) {
-        center.removePendingNotificationRequests(withIdentifiers: [identifier])
-    }
-
-    func removeDeliveredNotification(identifier: String) {
-        center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
 }
