@@ -8,6 +8,7 @@ struct AlertScheduleSnapshot: Equatable, Sendable {
     let hour: Int
     let minute: Int
     let weekdayMask: Int
+    let isWeekdaysOnly: Bool
     let monthDay: Int
     let month: Int
     var endDate: Date? = nil
@@ -78,15 +79,23 @@ struct RecurrenceCalculator: Sendable {
         startDate: Date,
         calendar: Calendar
     ) -> Date? {
-        nextMatching(
-            after: max(date, startDate.addingTimeInterval(-1)),
+        var searchStart = max(date, startDate.addingTimeInterval(-1))
+        while let candidate = nextMatching(
+            after: searchStart,
             components: DateComponents(
                 hour: schedule.hour,
                 minute: schedule.minute,
                 second: 0
             ),
             calendar: calendar
-        )
+        ) {
+            if !schedule.isWeekdaysOnly
+                || (2...6).contains(calendar.component(.weekday, from: candidate)) {
+                return candidate
+            }
+            searchStart = candidate
+        }
+        return nil
     }
 
     private func nextWeekly(

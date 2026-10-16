@@ -69,6 +69,7 @@ struct AlertValidator: Sendable {
         }
         var schedule = draft.snapshot(calendar: calendar)
         schedule.endDate = nil
+        schedule.endDateCalendarDay = nil
         return calculator.nextOccurrence(after: now, schedule: schedule, calendar: calendar)
             .map { calendar.startOfDay(for: $0) }
     }

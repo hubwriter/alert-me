@@ -110,6 +110,124 @@ struct RecurrenceCalculatorTests {
         #expect(next == expected)
     }
 
+    @Test(arguments: [
+        (16, 8, 59, 16),
+        (16, 9, 0, 19),
+        (16, 10, 0, 19),
+        (17, 0, 0, 19),
+        (17, 10, 0, 19),
+        (18, 8, 0, 19),
+        (18, 23, 59, 19),
+        (19, 8, 59, 19),
+        (19, 9, 0, 20)
+    ])
+    func weekdaysSkipSaturdayAndSunday(
+        day: Int, hour: Int, minute: Int, expectedDay: Int
+    ) throws {
+        let calendar = utcCalendar()
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 1)))
+        let now = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute)
+        ))
+        let schedule = makeSchedule(
+            recurrence: .daily,
+            startDate: start,
+            hour: 9,
+            isWeekdaysOnly: true
+        )
+        let expected = calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: expectedDay, hour: 9)
+        )
+
+        #expect(calculator.nextOccurrence(after: now, schedule: schedule, calendar: calendar) == expected)
+    }
+
+    @Test(arguments: [16, 17, 18])
+    func everyDayIncludesWeekends(day: Int) throws {
+        let calendar = utcCalendar()
+        let now = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: day, hour: 9)
+        ))
+        let schedule = makeSchedule(recurrence: .daily, startDate: now, hour: 9)
+        let expected = calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: day + 1, hour: 9)
+        )
+
+        #expect(calculator.nextOccurrence(after: now, schedule: schedule, calendar: calendar) == expected)
+    }
+
+    @Test(arguments: [17, 18])
+    func weekdayScheduleStartingOnWeekendWaitsUntilMonday(day: Int) throws {
+        let calendar = utcCalendar()
+        let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 16)))
+        let start = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: day, hour: 9)
+        ))
+        let schedule = makeSchedule(
+            recurrence: .daily,
+            startDate: start,
+            hour: 9,
+            isWeekdaysOnly: true
+        )
+        let expected = calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 19, hour: 9)
+        )
+
+        #expect(calculator.nextOccurrence(after: now, schedule: schedule, calendar: calendar) == expected)
+    }
+
+    @Test(arguments: [
+        ("America/Los_Angeles", 3, 6, 9),
+        ("America/Los_Angeles", 10, 30, 2),
+        ("Europe/London", 3, 27, 30),
+        ("Europe/London", 10, 23, 26)
+    ])
+    func weekdaysPreserveLocalTimeAcrossDaylightSavingChanges(
+        timeZone: String, month: Int, friday: Int, monday: Int
+    ) throws {
+        var calendar = utcCalendar()
+        calendar.timeZone = try #require(TimeZone(identifier: timeZone))
+        let start = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: month, day: friday, hour: 9, minute: 15)
+        ))
+        let schedule = makeSchedule(
+            recurrence: .daily,
+            startDate: start,
+            hour: 9,
+            minute: 15,
+            isWeekdaysOnly: true
+        )
+        let expected = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: monday < friday ? month + 1 : month,
+                day: monday,
+                hour: 9,
+                minute: 15
+            )
+        )
+
+        #expect(calculator.nextOccurrence(after: start, schedule: schedule, calendar: calendar) == expected)
+    }
+
+    @Test
+    func weeklyScheduleCanStillSelectSunday() throws {
+        let calendar = utcCalendar()
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 16)))
+        let schedule = makeSchedule(
+            recurrence: .weekly,
+            startDate: start,
+            hour: 9,
+            weekdayMask: WeekdayMask.value(for: 1),
+            isWeekdaysOnly: true
+        )
+        let expected = calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 18, hour: 9)
+        )
+
+        #expect(calculator.nextOccurrence(after: start, schedule: schedule, calendar: calendar) == expected)
+    }
+
     @Test
     func yearlyFebruary29SkipsNonLeapYears() throws {
         let calendar = utcCalendar()
@@ -148,6 +266,34 @@ struct RecurrenceCalculatorTests {
         ) == start)
         #expect(calculator.nextOccurrence(
             after: start, schedule: schedule, calendar: calendar
+        ) == nil)
+    }
+
+    @Test(arguments: [16, 17, 18, 19])
+    func weekdaysRespectEndDateAcrossWeekend(endDay: Int) throws {
+        let calendar = utcCalendar()
+        let friday = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 16, hour: 9)
+        ))
+        let monday = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 19, hour: 9)
+        ))
+        var schedule = makeSchedule(
+            recurrence: .daily,
+            startDate: friday,
+            hour: 9,
+            isWeekdaysOnly: true
+        )
+        schedule.endDateCalendarDay = CalendarDate(year: 2026, month: 10, day: endDay)
+
+        #expect(calculator.nextOccurrence(
+            after: friday.addingTimeInterval(-1), schedule: schedule, calendar: calendar
+        ) == friday)
+        #expect(calculator.nextOccurrence(
+            after: friday, schedule: schedule, calendar: calendar
+        ) == (endDay == 19 ? monday : nil))
+        #expect(calculator.nextOccurrence(
+            after: monday, schedule: schedule, calendar: calendar
         ) == nil)
     }
 
@@ -231,6 +377,7 @@ struct RecurrenceCalculatorTests {
         hour: Int = 10,
         minute: Int = 0,
         weekdayMask: Int = 0,
+        isWeekdaysOnly: Bool = false,
         monthDay: Int = 1,
         month: Int = 1
     ) -> AlertScheduleSnapshot {
@@ -242,6 +389,7 @@ struct RecurrenceCalculatorTests {
             hour: hour,
             minute: minute,
             weekdayMask: weekdayMask,
+            isWeekdaysOnly: isWeekdaysOnly,
             monthDay: monthDay,
             month: month
         )

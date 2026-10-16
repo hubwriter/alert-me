@@ -75,6 +75,7 @@ Sharing the app with other people requires a Developer ID signature and Apple no
 
 - Create one-time, daily, weekly, monthly, or yearly alerts.
 - Optionally set an **Until** date for recurring alerts. The date must be on or after the next trigger. Alerts can fire on that date and move to **Past** after their final occurrence.
+- Choose **Weekdays** (Monday through Friday, the default for new daily alerts) or **Every day** beside the daily alert time. Existing daily alerts retain their every-day schedule until you change it.
 - Enter messages of up to 500 characters.
 - Fire alerts at second zero as soon as the selected minute begins.
 - Set dates and times independently, or use **Now** to copy the current date and time.

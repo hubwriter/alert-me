@@ -76,6 +76,7 @@ final class AlertAppState: NSObject, ObservableObject {
             month: snapshot.month,
             endDate: snapshot.endDate,
             endDateCalendarDay: snapshot.endDateCalendarDay,
+            isWeekdaysOnly: snapshot.isWeekdaysOnly,
             isEnabled: draft.isEnabled,
             isSilent: draft.isSilent,
             createdAt: now,
@@ -94,6 +95,7 @@ final class AlertAppState: NSObject, ObservableObject {
         definition.hour = snapshot.hour
         definition.minute = snapshot.minute
         definition.weekdayMask = snapshot.weekdayMask
+        definition.isWeekdaysOnly = snapshot.isWeekdaysOnly
         definition.monthDay = snapshot.monthDay
         definition.month = snapshot.month
         definition.endDate = snapshot.endDate

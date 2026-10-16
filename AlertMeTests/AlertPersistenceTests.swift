@@ -5,6 +5,37 @@ import Testing
 
 @MainActor
 struct AlertPersistenceTests {
+    @Test(arguments: [true, false])
+    func dailyChoiceSurvivesSavingAndReopening(isWeekdaysOnly: Bool) throws {
+        let container = try ModelContainer(
+            for: AlertDefinition.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+        let definition = makeDailyDefinition()
+        definition.isWeekdaysOnly = isWeekdaysOnly
+        context.insert(definition)
+        try context.save()
+
+        let reopenedContext = ModelContext(container)
+        let restored = try #require(reopenedContext.fetch(FetchDescriptor<AlertDefinition>()).first)
+        let draft = AlertDraft(definition: restored)
+
+        #expect(restored.isWeekdaysOnly == isWeekdaysOnly)
+        #expect(restored.scheduleSnapshot.isWeekdaysOnly == isWeekdaysOnly)
+        #expect(draft.isWeekdaysOnly == isWeekdaysOnly)
+        #expect(draft.snapshot().isWeekdaysOnly == isWeekdaysOnly)
+    }
+
+    @Test
+    func definitionsWithoutDailyChoiceRetainEveryDayBehavior() {
+        let definition = makeDailyDefinition()
+
+        #expect(!definition.isWeekdaysOnly)
+        #expect(!definition.scheduleSnapshot.isWeekdaysOnly)
+        #expect(!AlertDraft(definition: definition).isWeekdaysOnly)
+    }
+
     @Test
     func storesAndFetchesAlertDefinition() throws {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -67,5 +98,19 @@ struct AlertPersistenceTests {
         #expect(stored.endDateCalendarDay == CalendarDate(date: endDate))
         #expect(stored.scheduleSnapshot.endDate == endDate)
         #expect(stored.scheduleSnapshot.endDateCalendarDay == CalendarDate(date: endDate))
+    }
+
+    private func makeDailyDefinition() -> AlertDefinition {
+        AlertDefinition(
+            message: "Daily reminder",
+            recurrence: .daily,
+            oneTimeDate: nil,
+            startDate: Date().addingTimeInterval(3_600),
+            hour: 11,
+            minute: 0,
+            weekdayMask: WeekdayMask.value(for: 4),
+            monthDay: 1,
+            month: 1
+        )
     }
 }

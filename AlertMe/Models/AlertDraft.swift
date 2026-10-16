@@ -5,6 +5,7 @@ struct AlertDraft: Equatable, Sendable {
     var scheduledDate: Date
     var recurrence: RecurrenceKind = .oneTime
     var weekdayMask: Int
+    var isWeekdaysOnly = true
     var isEnabled = true
     var isSilent = false
     var endDateCalendarDay: CalendarDate? = nil
@@ -28,6 +29,7 @@ struct AlertDraft: Equatable, Sendable {
         scheduledDate = definition.oneTimeDate ?? definition.startDate
         recurrence = definition.recurrence
         weekdayMask = definition.weekdayMask
+        isWeekdaysOnly = definition.isWeekdaysOnly
         isEnabled = definition.isEnabled
         isSilent = definition.isSilent
         endDateCalendarDay = definition.endDateCalendarDay
@@ -47,6 +49,7 @@ struct AlertDraft: Equatable, Sendable {
             hour: components.hour ?? 0,
             minute: components.minute ?? 0,
             weekdayMask: weekdayMask,
+            isWeekdaysOnly: isWeekdaysOnly,
             monthDay: components.day ?? 1,
             month: components.month ?? 1,
             endDate: recurrence == .oneTime ? nil : endDateCalendarDay?.date(in: calendar),

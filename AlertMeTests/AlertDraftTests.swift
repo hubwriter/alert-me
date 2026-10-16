@@ -4,6 +4,28 @@ import Testing
 
 struct AlertDraftTests {
     @Test
+    func newDailyAlertsDefaultToWeekdays() {
+        var draft = AlertDraft()
+        draft.recurrence = .daily
+
+        #expect(draft.isWeekdaysOnly)
+        #expect(draft.snapshot().isWeekdaysOnly)
+    }
+
+    @Test
+    func dailyChoiceIsIndependentOfWeeklySelection() {
+        var draft = AlertDraft()
+        draft.recurrence = .daily
+        draft.isWeekdaysOnly = false
+        draft.recurrence = .weekly
+        draft.weekdayMask = WeekdayMask.value(for: 1)
+        draft.recurrence = .daily
+
+        #expect(!draft.snapshot().isWeekdaysOnly)
+        #expect(draft.weekdayMask == WeekdayMask.value(for: 1))
+    }
+
+    @Test
     func weeklyDefaultUsesCurrentWeekdayWhenDefaultTimeCrossesMidnight() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

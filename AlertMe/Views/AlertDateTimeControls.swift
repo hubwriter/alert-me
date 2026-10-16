@@ -4,6 +4,7 @@ import SwiftUI
 struct AlertDateTimeControls: View {
     @Binding var selection: Date
     @Binding var weekdayMask: Int
+    @Binding var isWeekdaysOnly: Bool
     let recurrence: RecurrenceKind
 
     var body: some View {
@@ -75,6 +76,19 @@ struct AlertDateTimeControls: View {
                     )
                     .labelsHidden()
                     .accessibilityIdentifier("alertTimeStepper")
+
+                    if recurrence == .daily {
+                        Picker("Daily schedule", selection: $isWeekdaysOnly) {
+                            Text("Weekdays").tag(true)
+                            Text("Every day").tag(false)
+                        }
+                        .pickerStyle(.radioGroup)
+                        .horizontalRadioGroupLayout()
+                        .labelsHidden()
+                        .fixedSize()
+                        .padding(.leading, 24)
+                        .accessibilityIdentifier("alertDailySchedulePicker")
+                    }
                 }
             }
 
