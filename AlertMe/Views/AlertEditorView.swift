@@ -14,6 +14,7 @@ struct AlertEditorView: View {
 
     var body: some View {
         let validation = AlertValidator().validate(draft, now: Date())
+        let minimumEndDate = AlertValidator().minimumEndDate(for: draft, now: Date())
 
         VStack(alignment: .leading, spacing: 20) {
             Text(definition == nil ? "New Alert" : "Edit Alert")
@@ -51,6 +52,7 @@ struct AlertEditorView: View {
             AlertDateTimeControls(
                 selection: $draft.scheduledDate,
                 weekdayMask: $draft.weekdayMask,
+                isWeekdaysOnly: $draft.isWeekdaysOnly,
                 recurrence: draft.recurrence
             )
 
@@ -63,6 +65,18 @@ struct AlertEditorView: View {
 
             if definition != nil {
                 Toggle("Enabled", isOn: $draft.isEnabled)
+            }
+
+            if draft.recurrence != .oneTime {
+                VStack(alignment: .leading, spacing: 6) {
+                    AlertEndDateControls(
+                        endDate: $draft.endDate,
+                        minimumDate: minimumEndDate ?? Calendar.current.startOfDay(for: draft.scheduledDate)
+                    )
+                    if let error = validation.endDateError {
+                        ValidationMessage(error)
+                    }
+                }
             }
 
             Spacer()
@@ -91,6 +105,11 @@ struct AlertEditorView: View {
         .padding(24)
         .frame(width: 560)
         .frame(minHeight: 500)
+        .onChange(of: minimumEndDate) { _, minimumDate in
+            if let minimumDate, let endDate = draft.endDate, endDate < minimumDate {
+                draft.endDate = minimumDate
+            }
+        }
     }
 
     private var silentInvertedBinding: Binding<Bool> {

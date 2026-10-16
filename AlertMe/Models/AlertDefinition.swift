@@ -27,6 +27,45 @@ enum AlertOutcome: String, Codable, Sendable {
     case missed
 }
 
+struct CalendarDate: Comparable, Equatable, Sendable {
+    let year: Int
+    let month: Int
+    let day: Int
+
+    init(year: Int, month: Int, day: Int) {
+        self.year = year
+        self.month = month
+        self.day = day
+    }
+
+    init(date: Date, calendar: Calendar = .current) {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        year = components.year ?? 1
+        month = components.month ?? 1
+        day = components.day ?? 1
+    }
+
+    func date(in calendar: Calendar) -> Date? {
+        var components = DateComponents()
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
+        components.year = year
+        components.month = month
+        components.day = day
+        return calendar.date(from: components)
+    }
+
+    static func < (lhs: CalendarDate, rhs: CalendarDate) -> Bool {
+        if lhs.year != rhs.year {
+            return lhs.year < rhs.year
+        }
+        if lhs.month != rhs.month {
+            return lhs.month < rhs.month
+        }
+        return lhs.day < rhs.day
+    }
+}
+
 @Model
 final class AlertDefinition {
     @Attribute(.unique) var id: UUID
@@ -37,6 +76,7 @@ final class AlertDefinition {
     var hour: Int
     var minute: Int
     var weekdayMask: Int
+    var isWeekdaysOnly: Bool = false
     var monthDay: Int
     var month: Int
     var isEnabled: Bool
@@ -48,6 +88,10 @@ final class AlertDefinition {
     var missedCount: Int
     var nextOccurrenceAt: Date?
     var lastDismissedAt: Date?
+    var endDate: Date?
+    var endDateYear: Int?
+    var endDateMonth: Int?
+    var endDateDay: Int?
 
     init(
         id: UUID = UUID(),
@@ -60,6 +104,9 @@ final class AlertDefinition {
         weekdayMask: Int,
         monthDay: Int,
         month: Int,
+        endDate: Date? = nil,
+        endDateCalendarDay: CalendarDate? = nil,
+        isWeekdaysOnly: Bool = false,
         isEnabled: Bool = true,
         isSilent: Bool = false,
         createdAt: Date = Date(),
@@ -75,6 +122,11 @@ final class AlertDefinition {
         self.weekdayMask = weekdayMask
         self.monthDay = monthDay
         self.month = month
+        self.endDate = endDate
+        endDateYear = endDateCalendarDay?.year
+        endDateMonth = endDateCalendarDay?.month
+        endDateDay = endDateCalendarDay?.day
+        self.isWeekdaysOnly = isWeekdaysOnly
         self.isEnabled = isEnabled
         self.isSilent = isSilent
         self.createdAt = createdAt
@@ -92,6 +144,13 @@ final class AlertDefinition {
         set { lastOutcomeRawValue = newValue?.rawValue }
     }
 
+    var endDateCalendarDay: CalendarDate? {
+        if let endDateYear, let endDateMonth, let endDateDay {
+            return CalendarDate(year: endDateYear, month: endDateMonth, day: endDateDay)
+        }
+        return endDate.map { CalendarDate(date: $0) }
+    }
+
     var scheduleSnapshot: AlertScheduleSnapshot {
         AlertScheduleSnapshot(
             id: id,
@@ -101,8 +160,11 @@ final class AlertDefinition {
             hour: hour,
             minute: minute,
             weekdayMask: weekdayMask,
+            isWeekdaysOnly: isWeekdaysOnly,
             monthDay: monthDay,
-            month: month
+            month: month,
+            endDate: endDate,
+            endDateCalendarDay: endDateCalendarDay
         )
     }
 }

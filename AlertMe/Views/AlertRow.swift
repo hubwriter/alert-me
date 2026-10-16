@@ -19,7 +19,7 @@ struct AlertRow: View {
                     .lineLimit(2)
 
                 HStack(spacing: 8) {
-                    Text(scheduleDescription)
+                    Text(scheduleDescription + endDateDescription)
                     if !definition.isEnabled {
                         Text("Disabled")
                             .foregroundStyle(.orange)
@@ -68,7 +68,8 @@ struct AlertRow: View {
             }
             return "\(AlertDisplayDateFormatter.dateString(from: date)) at \(formatter.string(from: date))"
         case .daily:
-            return "Every day at \(timeString(formatter))"
+            let days = definition.isWeekdaysOnly ? "Weekdays" : "Every day"
+            return "\(days) at \(timeString(formatter))"
         case .weekly:
             let weekdays = Calendar.current.weekdaySymbols.enumerated().compactMap { index, name in
                 WeekdayMask.contains(definition.weekdayMask, calendarWeekday: index + 1)
@@ -105,5 +106,13 @@ struct AlertRow: View {
         case .dismissed: "Dismissed"
         case .missed: "Missed"
         }
+    }
+
+    private var endDateDescription: String {
+        guard definition.recurrence != .oneTime,
+              let endDate = definition.endDateCalendarDay?.date(in: .current) ?? definition.endDate else {
+            return ""
+        }
+        return " until \(AlertDisplayDateFormatter.dateString(from: endDate))"
     }
 }

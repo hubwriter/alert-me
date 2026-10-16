@@ -6,6 +6,72 @@ import UserNotifications
 @MainActor
 struct NotificationStatusRefreshTests {
     @Test
+    func dailyChoiceUpdatesPopupAndFallbackSchedule() async throws {
+        let container = try ModelContainer(
+            for: AlertDefinition.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let scheduler = RefreshTestNotificationScheduler()
+        scheduler.status = .authorized
+        let state = AlertAppState(
+            modelContainer: container,
+            settings: AppSettings(
+                defaults: try #require(UserDefaults(suiteName: UUID().uuidString)),
+                availableSounds: ["Glass"]
+            ),
+            notificationScheduler: scheduler,
+            loginItemService: RefreshTestLoginItemService(),
+            presenter: RefreshTestPresenter()
+        )
+        await state.refreshAuthorizationAfterReturningFromSettings()
+
+        let calendar = Calendar.current
+        let saturday = try #require(calendar.nextDate(
+            after: Date().addingTimeInterval(86_400),
+            matching: DateComponents(hour: 9, minute: 0, second: 0, weekday: 7),
+            matchingPolicy: .nextTime
+        ))
+        let monday = try #require(calendar.date(byAdding: .day, value: 2, to: saturday))
+        var draft = AlertDraft()
+        draft.message = "Daily reminder"
+        draft.recurrence = .daily
+        draft.scheduledDate = saturday
+        state.add(draft)
+        await waitUntil {
+            scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: monday)
+        }
+
+        let definition = try #require(state.definitions.first)
+        #expect(definition.isWeekdaysOnly)
+        #expect(definition.nextOccurrenceAt == monday)
+        #expect(scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: monday))
+        #expect(definition.missedCount == 0)
+
+        draft = AlertDraft(definition: definition)
+        draft.isWeekdaysOnly = false
+        state.update(definition, with: draft)
+        await waitUntil {
+            scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: saturday)
+        }
+
+        #expect(!definition.isWeekdaysOnly)
+        #expect(definition.nextOccurrenceAt == saturday)
+        #expect(scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: saturday))
+
+        draft.isWeekdaysOnly = true
+        state.update(definition, with: draft)
+        await waitUntil {
+            scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: monday)
+        }
+
+        #expect(definition.isWeekdaysOnly)
+        #expect(definition.nextOccurrenceAt == monday)
+        #expect(scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: monday))
+        #expect(definition.missedCount == 0)
+        #expect(state.lastError == nil)
+    }
+
+    @Test
     func refreshesAuthorizationAndReconcilesAfterReturningFromSettings() async throws {
         let container = try ModelContainer(
             for: AlertDefinition.self,
@@ -101,6 +167,7 @@ private final class RefreshTestNotificationScheduler: NotificationScheduling {
     var status: UNAuthorizationStatus = .denied
     var replaceCallCount = 0
     var removedPendingIdentifiers: [String] = []
+    var descriptors: [NotificationDescriptor] = []
 
     func authorizationStatus() async -> UNAuthorizationStatus {
         status
@@ -111,6 +178,7 @@ private final class RefreshTestNotificationScheduler: NotificationScheduling {
     }
 
     func replaceManagedNotifications(with descriptors: [NotificationDescriptor]) async throws {
+        self.descriptors = descriptors
         replaceCallCount += 1
     }
 

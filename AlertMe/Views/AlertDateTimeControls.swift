@@ -4,6 +4,7 @@ import SwiftUI
 struct AlertDateTimeControls: View {
     @Binding var selection: Date
     @Binding var weekdayMask: Int
+    @Binding var isWeekdaysOnly: Bool
     let recurrence: RecurrenceKind
 
     var body: some View {
@@ -75,6 +76,19 @@ struct AlertDateTimeControls: View {
                     )
                     .labelsHidden()
                     .accessibilityIdentifier("alertTimeStepper")
+
+                    if recurrence == .daily {
+                        Picker("Daily schedule", selection: $isWeekdaysOnly) {
+                            Text("Weekdays").tag(true)
+                            Text("Every day").tag(false)
+                        }
+                        .pickerStyle(.radioGroup)
+                        .horizontalRadioGroupLayout()
+                        .labelsHidden()
+                        .fixedSize()
+                        .padding(.leading, 24)
+                        .accessibilityIdentifier("alertDailySchedulePicker")
+                    }
                 }
             }
 
@@ -140,7 +154,109 @@ struct AlertDateTimeControls: View {
     }()
 }
 
+struct AlertEndDateControls: View {
+    @Binding var endDate: Date?
+    let minimumDate: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Until:")
+                .font(.headline)
+
+            EndDateRadioButton(
+                title: "No end date.",
+                isSelected: endDate == nil,
+                accessibilityIdentifier: "noEndDateRadioButton"
+            ) {
+                endDate = nil
+            }
+            .fixedSize()
+
+            HStack(spacing: 6) {
+                EndDateRadioButton(
+                    title: "",
+                    isSelected: endDate != nil,
+                    accessibilityIdentifier: "endDateRadioButton"
+                ) {
+                    endDate = endDate ?? minimumDate
+                }
+                .fixedSize()
+                .accessibilityLabel("End date")
+
+                ArrowSteppingDateField(
+                    selection: dateBinding,
+                    formatter: AlertDateTimeControls.dateFormatter,
+                    components: [.day, .month, .year],
+                    accessibilityIdentifier: "alertEndDateField"
+                )
+                .frame(width: 112)
+                .disabled(endDate == nil)
+
+                Stepper(
+                    "Change end date",
+                    onIncrement: {
+                        dateBinding.wrappedValue = AlertDateEditing.addingDays(1, to: dateBinding.wrappedValue)
+                    },
+                    onDecrement: {
+                        dateBinding.wrappedValue = AlertDateEditing.addingDays(-1, to: dateBinding.wrappedValue)
+                    }
+                )
+                .labelsHidden()
+                .disabled(endDate == nil)
+                .accessibilityIdentifier("alertEndDateStepper")
+            }
+        }
+    }
+
+    private var dateBinding: Binding<Date> {
+        Binding(
+            get: { endDate ?? minimumDate },
+            set: { endDate = max(minimumDate, Calendar.current.startOfDay(for: $0)) }
+        )
+    }
+}
+
+private struct EndDateRadioButton: NSViewRepresentable {
+    let title: String
+    let isSelected: Bool
+    let accessibilityIdentifier: String
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(
+            radioButtonWithTitle: title,
+            target: context.coordinator,
+            action: #selector(Coordinator.select)
+        )
+        button.identifier = NSUserInterfaceItemIdentifier(accessibilityIdentifier)
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        button.state = isSelected ? .on : .off
+        context.coordinator.action = action
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var action: () -> Void
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        @objc func select() {
+            action()
+        }
+    }
+}
+
 private struct ArrowSteppingDateField: NSViewRepresentable {
+    @Environment(\.isEnabled) private var isEnabled
     @Binding var selection: Date
     let formatter: DateFormatter
     let components: [AlertDateComponent]
@@ -165,6 +281,7 @@ private struct ArrowSteppingDateField: NSViewRepresentable {
 
     func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.selection = $selection
+        field.isEnabled = isEnabled
         if field.currentEditor() == nil {
             field.objectValue = selection
         }
@@ -238,6 +355,7 @@ private struct ArrowSteppingDateField: NSViewRepresentable {
                     with: date
                 )
             }
+            field.objectValue = selection.wrappedValue
         }
     }
 }

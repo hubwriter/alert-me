@@ -5,8 +5,17 @@ struct AlertDraft: Equatable, Sendable {
     var scheduledDate: Date
     var recurrence: RecurrenceKind = .oneTime
     var weekdayMask: Int
+    var isWeekdaysOnly = true
     var isEnabled = true
     var isSilent = false
+    var endDateCalendarDay: CalendarDate? = nil
+
+    var endDate: Date? {
+        get { endDateCalendarDay?.date(in: .current) }
+        set {
+            endDateCalendarDay = newValue.map { CalendarDate(date: $0) }
+        }
+    }
 
     init(now: Date = Date(), calendar: Calendar = .current) {
         let proposedDate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
@@ -20,8 +29,10 @@ struct AlertDraft: Equatable, Sendable {
         scheduledDate = definition.oneTimeDate ?? definition.startDate
         recurrence = definition.recurrence
         weekdayMask = definition.weekdayMask
+        isWeekdaysOnly = definition.isWeekdaysOnly
         isEnabled = definition.isEnabled
         isSilent = definition.isSilent
+        endDateCalendarDay = definition.endDateCalendarDay
     }
 
     func snapshot(id: UUID = UUID(), calendar: Calendar = .current) -> AlertScheduleSnapshot {
@@ -38,8 +49,11 @@ struct AlertDraft: Equatable, Sendable {
             hour: components.hour ?? 0,
             minute: components.minute ?? 0,
             weekdayMask: weekdayMask,
+            isWeekdaysOnly: isWeekdaysOnly,
             monthDay: components.day ?? 1,
-            month: components.month ?? 1
+            month: components.month ?? 1,
+            endDate: recurrence == .oneTime ? nil : endDateCalendarDay?.date(in: calendar),
+            endDateCalendarDay: recurrence == .oneTime ? nil : endDateCalendarDay
         )
     }
 }

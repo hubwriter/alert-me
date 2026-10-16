@@ -8,8 +8,11 @@ struct AlertScheduleSnapshot: Equatable, Sendable {
     let hour: Int
     let minute: Int
     let weekdayMask: Int
+    let isWeekdaysOnly: Bool
     let monthDay: Int
     let month: Int
+    var endDate: Date? = nil
+    var endDateCalendarDay: CalendarDate? = nil
 }
 
 struct RecurrenceCalculator: Sendable {
@@ -20,6 +23,7 @@ struct RecurrenceCalculator: Sendable {
     ) -> Date? {
         let normalizedStartDate = startOfMinute(schedule.startDate, calendar: calendar)
 
+        let occurrence: Date?
         switch schedule.recurrence {
         case .oneTime:
             guard let oneTimeDate = schedule.oneTimeDate.map({
@@ -29,34 +33,44 @@ struct RecurrenceCalculator: Sendable {
             }
             return oneTimeDate
         case .daily:
-            return nextDaily(
+            occurrence = nextDaily(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         case .weekly:
-            return nextWeekly(
+            occurrence = nextWeekly(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         case .monthly:
-            return nextMonthly(
+            occurrence = nextMonthly(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         case .yearly:
-            return nextYearly(
+            occurrence = nextYearly(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         }
+
+        guard let occurrence else {
+            return nil
+        }
+        if let endDate = schedule.endDateCalendarDay
+            ?? schedule.endDate.map({ CalendarDate(date: $0, calendar: calendar) }),
+           CalendarDate(date: occurrence, calendar: calendar) > endDate {
+            return nil
+        }
+        return occurrence
     }
 
     private func nextDaily(
@@ -65,15 +79,23 @@ struct RecurrenceCalculator: Sendable {
         startDate: Date,
         calendar: Calendar
     ) -> Date? {
-        nextMatching(
-            after: max(date, startDate.addingTimeInterval(-1)),
+        var searchStart = max(date, startDate.addingTimeInterval(-1))
+        while let candidate = nextMatching(
+            after: searchStart,
             components: DateComponents(
                 hour: schedule.hour,
                 minute: schedule.minute,
                 second: 0
             ),
             calendar: calendar
-        )
+        ) {
+            if !schedule.isWeekdaysOnly
+                || (2...6).contains(calendar.component(.weekday, from: candidate)) {
+                return candidate
+            }
+            searchStart = candidate
+        }
+        return nil
     }
 
     private func nextWeekly(
