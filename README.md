@@ -80,6 +80,7 @@ Sharing the app with other people requires a Developer ID signature and Apple no
 - Fire alerts at second zero as soon as the selected minute begins.
 - Set dates and times independently, or use **Now** to copy the current date and time.
 - Display one-time alert dates as `09 September 2026`.
+- Group upcoming alerts under **Today**, **Later this week** (through Sunday), and **Future**, followed by **Past** alerts. Empty sections are hidden, and dates use the Mac's local time.
 - Choose one app-wide macOS system sound or make individual alerts silent.
 - Repeat the sound every five seconds, up to 20 additional times, until dismissal.
 - Keep running when the management window is closed.
