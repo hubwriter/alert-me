@@ -19,7 +19,7 @@ struct AlertRow: View {
                     .lineLimit(2)
 
                 HStack(spacing: 8) {
-                    Text(scheduleDescription)
+                    Text(scheduleDescription + endDateDescription)
                     if !definition.isEnabled {
                         Text("Disabled")
                             .foregroundStyle(.orange)
@@ -105,5 +105,13 @@ struct AlertRow: View {
         case .dismissed: "Dismissed"
         case .missed: "Missed"
         }
+    }
+
+    private var endDateDescription: String {
+        guard definition.recurrence != .oneTime,
+              let endDate = definition.endDateCalendarDay?.date(in: .current) ?? definition.endDate else {
+            return ""
+        }
+        return " until \(AlertDisplayDateFormatter.dateString(from: endDate))"
     }
 }
