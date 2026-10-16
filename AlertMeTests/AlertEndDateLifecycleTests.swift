@@ -68,6 +68,7 @@ struct AlertEndDateLifecycleTests {
 
         let definition = try #require(state.definitions.first)
         #expect(definition.endDate == draft.endDate)
+        #expect(definition.endDateCalendarDay == draft.endDateCalendarDay)
 
         draft.endDate = nil
         state.update(definition, with: draft)

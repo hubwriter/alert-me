@@ -11,6 +11,7 @@ struct AlertScheduleSnapshot: Equatable, Sendable {
     let monthDay: Int
     let month: Int
     var endDate: Date? = nil
+    var endDateCalendarDay: CalendarDate? = nil
 }
 
 struct RecurrenceCalculator: Sendable {
@@ -63,8 +64,9 @@ struct RecurrenceCalculator: Sendable {
         guard let occurrence else {
             return nil
         }
-        if let endDate = schedule.endDate,
-           calendar.startOfDay(for: occurrence) > calendar.startOfDay(for: endDate) {
+        if let endDate = schedule.endDateCalendarDay
+            ?? schedule.endDate.map({ CalendarDate(date: $0, calendar: calendar) }),
+           CalendarDate(date: occurrence, calendar: calendar) > endDate {
             return nil
         }
         return occurrence

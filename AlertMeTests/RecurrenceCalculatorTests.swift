@@ -183,6 +183,32 @@ struct RecurrenceCalculatorTests {
     }
 
     @Test
+    func cutoffKeepsSelectedDayAfterWestwardTimeZoneChange() throws {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        var westwardCalendar = Calendar(identifier: .gregorian)
+        westwardCalendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+
+        let selectedCutoff = try #require(
+            utcCalendar.date(from: DateComponents(year: 2026, month: 6, day: 16))
+        )
+        let occurrence = try #require(
+            westwardCalendar.date(from: DateComponents(year: 2026, month: 6, day: 16, hour: 9))
+        )
+        var schedule = makeSchedule(recurrence: .daily, startDate: occurrence, hour: 9)
+        schedule.endDate = selectedCutoff
+        schedule.endDateCalendarDay = CalendarDate(date: selectedCutoff, calendar: utcCalendar)
+
+        #expect(CalendarDate(date: selectedCutoff, calendar: westwardCalendar).day == 15)
+        #expect(calculator.nextOccurrence(
+            after: occurrence.addingTimeInterval(-1), schedule: schedule, calendar: westwardCalendar
+        ) == occurrence)
+        #expect(calculator.nextOccurrence(
+            after: occurrence, schedule: schedule, calendar: westwardCalendar
+        ) == nil)
+    }
+
+    @Test
     func leapDayAfterCutoffIsNotScheduled() throws {
         let calendar = utcCalendar()
         let start = try #require(

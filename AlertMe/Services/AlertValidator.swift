@@ -44,9 +44,9 @@ struct AlertValidator: Sendable {
 
         let endDateError: String?
         if draft.recurrence != .oneTime,
-           let endDate = draft.endDate,
+           let endDate = draft.endDateCalendarDay,
            let minimumEndDate,
-           calendar.startOfDay(for: endDate) < minimumEndDate {
+           endDate < CalendarDate(date: minimumEndDate, calendar: calendar) {
             endDateError = "Choose an end date on or after the next alert."
         } else {
             endDateError = nil

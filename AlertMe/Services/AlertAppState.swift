@@ -75,6 +75,7 @@ final class AlertAppState: NSObject, ObservableObject {
             monthDay: snapshot.monthDay,
             month: snapshot.month,
             endDate: snapshot.endDate,
+            endDateCalendarDay: snapshot.endDateCalendarDay,
             isEnabled: draft.isEnabled,
             isSilent: draft.isSilent,
             createdAt: now,
@@ -96,6 +97,9 @@ final class AlertAppState: NSObject, ObservableObject {
         definition.monthDay = snapshot.monthDay
         definition.month = snapshot.month
         definition.endDate = snapshot.endDate
+        definition.endDateYear = snapshot.endDateCalendarDay?.year
+        definition.endDateMonth = snapshot.endDateCalendarDay?.month
+        definition.endDateDay = snapshot.endDateCalendarDay?.day
         definition.isEnabled = draft.isEnabled
         definition.isSilent = draft.isSilent
         definition.updatedAt = Date()
@@ -530,6 +534,7 @@ final class AlertAppState: NSObject, ObservableObject {
         }
         return definition.nextOccurrenceAt
             ?? definition.lastHandledOccurrence
+            ?? definition.endDateCalendarDay?.date(in: .current)
             ?? definition.endDate
             ?? .distantFuture
     }

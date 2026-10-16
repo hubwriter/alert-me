@@ -7,7 +7,14 @@ struct AlertDraft: Equatable, Sendable {
     var weekdayMask: Int
     var isEnabled = true
     var isSilent = false
-    var endDate: Date?
+    var endDateCalendarDay: CalendarDate? = nil
+
+    var endDate: Date? {
+        get { endDateCalendarDay?.date(in: .current) }
+        set {
+            endDateCalendarDay = newValue.map { CalendarDate(date: $0) }
+        }
+    }
 
     init(now: Date = Date(), calendar: Calendar = .current) {
         let proposedDate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
@@ -23,7 +30,7 @@ struct AlertDraft: Equatable, Sendable {
         weekdayMask = definition.weekdayMask
         isEnabled = definition.isEnabled
         isSilent = definition.isSilent
-        endDate = definition.endDate
+        endDateCalendarDay = definition.endDateCalendarDay
     }
 
     func snapshot(id: UUID = UUID(), calendar: Calendar = .current) -> AlertScheduleSnapshot {
@@ -42,7 +49,8 @@ struct AlertDraft: Equatable, Sendable {
             weekdayMask: weekdayMask,
             monthDay: components.day ?? 1,
             month: components.month ?? 1,
-            endDate: recurrence == .oneTime ? nil : endDate.map { calendar.startOfDay(for: $0) }
+            endDate: recurrence == .oneTime ? nil : endDateCalendarDay?.date(in: calendar),
+            endDateCalendarDay: recurrence == .oneTime ? nil : endDateCalendarDay
         )
     }
 }

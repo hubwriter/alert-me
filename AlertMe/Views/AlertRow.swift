@@ -108,7 +108,8 @@ struct AlertRow: View {
     }
 
     private var endDateDescription: String {
-        guard definition.recurrence != .oneTime, let endDate = definition.endDate else {
+        guard definition.recurrence != .oneTime,
+              let endDate = definition.endDateCalendarDay?.date(in: .current) ?? definition.endDate else {
             return ""
         }
         return " until \(AlertDisplayDateFormatter.dateString(from: endDate))"

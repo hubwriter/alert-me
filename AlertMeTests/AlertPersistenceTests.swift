@@ -55,7 +55,8 @@ struct AlertPersistenceTests {
             weekdayMask: 0,
             monthDay: 1,
             month: 1,
-            endDate: endDate
+            endDate: endDate,
+            endDateCalendarDay: CalendarDate(date: endDate)
         )
         context.insert(definition)
         try context.save()
@@ -63,6 +64,8 @@ struct AlertPersistenceTests {
         let reader = ModelContext(container)
         let stored = try #require(reader.fetch(FetchDescriptor<AlertDefinition>()).first)
         #expect(stored.endDate == endDate)
+        #expect(stored.endDateCalendarDay == CalendarDate(date: endDate))
         #expect(stored.scheduleSnapshot.endDate == endDate)
+        #expect(stored.scheduleSnapshot.endDateCalendarDay == CalendarDate(date: endDate))
     }
 }
