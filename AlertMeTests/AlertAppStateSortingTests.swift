@@ -199,6 +199,38 @@ struct AlertAppStateSortingTests {
     }
 
     @Test
+    func disabledDailyAlertsRefreshTheirOccurrenceForSectionsAndOrdering() throws {
+        let calendar = calendar()
+        let now = try date(day: 17, hour: 9, calendar: calendar)
+        let afternoon = makeDefinition(
+            message: "Afternoon",
+            recurrence: .daily,
+            date: try date(day: 16, hour: 15, calendar: calendar)
+        )
+        afternoon.hour = 15
+        afternoon.isEnabled = false
+        afternoon.nextOccurrenceAt = try date(day: 16, hour: 15, calendar: calendar)
+
+        let morning = makeDefinition(
+            message: "Morning",
+            recurrence: .daily,
+            date: try date(day: 16, hour: 10, calendar: calendar)
+        )
+        morning.hour = 10
+        morning.isEnabled = false
+        morning.nextOccurrenceAt = try date(day: 18, hour: 10, calendar: calendar)
+
+        let sections = AlertAppState.listSections(
+            from: [afternoon, morning],
+            relativeTo: now,
+            calendar: calendar
+        )
+
+        #expect(sections.map(\.title) == ["Today"])
+        #expect(sections.first?.definitions.map(\.message) == ["Morning", "Afternoon"])
+    }
+
+    @Test
     func emptyListsHaveNoSectionsAndPastOnlyListsHaveOnlyPast() throws {
         let calendar = calendar()
         let now = try date(day: 16, hour: 12, calendar: calendar)

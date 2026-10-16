@@ -201,8 +201,8 @@ final class AlertAppState: NSObject, ObservableObject {
         var laterThisWeek: [AlertDefinition] = []
         var future: [AlertDefinition] = []
 
-        for definition in futureDefinitions(from: definitions, relativeTo: now) {
-            let date = displayDate(for: definition)
+        for definition in futureDefinitions(from: definitions, relativeTo: now, calendar: calendar) {
+            let date = displayDate(for: definition, relativeTo: now, calendar: calendar)
             if calendar.isDate(date, inSameDayAs: now) {
                 today.append(definition)
             } else if date > now, weekCalendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
@@ -222,11 +222,14 @@ final class AlertAppState: NSObject, ObservableObject {
 
     static func futureDefinitions(
         from definitions: [AlertDefinition],
-        relativeTo now: Date
+        relativeTo now: Date,
+        calendar: Calendar = .current
     ) -> [AlertDefinition] {
         definitions
             .filter { !isPast($0, relativeTo: now) }
-            .sorted(by: Self.futureDisplayOrder)
+            .sorted {
+                futureDisplayOrder($0, $1, relativeTo: now, calendar: calendar)
+            }
     }
 
     static func pastDefinitions(
@@ -543,14 +546,16 @@ final class AlertAppState: NSObject, ObservableObject {
 
     private static func futureDisplayOrder(
         _ lhs: AlertDefinition,
-        _ rhs: AlertDefinition
+        _ rhs: AlertDefinition,
+        relativeTo now: Date,
+        calendar: Calendar
     ) -> Bool {
         (
-            displayDate(for: lhs),
+            displayDate(for: lhs, relativeTo: now, calendar: calendar),
             lhs.createdAt,
             lhs.id.uuidString
         ) < (
-            displayDate(for: rhs),
+            displayDate(for: rhs, relativeTo: now, calendar: calendar),
             rhs.createdAt,
             rhs.id.uuidString
         )
@@ -580,6 +585,21 @@ final class AlertAppState: NSObject, ObservableObject {
             ?? definition.endDateCalendarDay?.date(in: .current)
             ?? definition.endDate
             ?? .distantFuture
+    }
+
+    private static func displayDate(
+        for definition: AlertDefinition,
+        relativeTo now: Date,
+        calendar: Calendar
+    ) -> Date {
+        guard !definition.isEnabled, definition.recurrence != .oneTime else {
+            return displayDate(for: definition)
+        }
+        return RecurrenceCalculator().nextOccurrence(
+            after: max(now, definition.lastHandledOccurrence ?? .distantPast),
+            schedule: definition.scheduleSnapshot,
+            calendar: calendar
+        ) ?? displayDate(for: definition)
     }
 }
 
