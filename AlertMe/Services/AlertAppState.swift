@@ -4,6 +4,13 @@ import Foundation
 import SwiftData
 import UserNotifications
 
+struct AlertListSection: Identifiable {
+    let title: String
+    let definitions: [AlertDefinition]
+
+    var id: String { title }
+}
+
 @MainActor
 final class AlertAppState: NSObject, ObservableObject {
     @Published private(set) var definitions: [AlertDefinition] = []
@@ -169,6 +176,40 @@ final class AlertAppState: NSObject, ObservableObject {
 
     func pastDefinitions(relativeTo now: Date) -> [AlertDefinition] {
         Self.pastDefinitions(from: definitions, relativeTo: now)
+    }
+
+    func listSections(relativeTo now: Date) -> [AlertListSection] {
+        Self.listSections(from: definitions, relativeTo: now)
+    }
+
+    static func listSections(
+        from definitions: [AlertDefinition],
+        relativeTo now: Date,
+        calendar: Calendar = .current
+    ) -> [AlertListSection] {
+        var weekCalendar = calendar
+        weekCalendar.firstWeekday = 2
+        var today: [AlertDefinition] = []
+        var laterThisWeek: [AlertDefinition] = []
+        var future: [AlertDefinition] = []
+
+        for definition in futureDefinitions(from: definitions, relativeTo: now) {
+            let date = displayDate(for: definition)
+            if calendar.isDate(date, inSameDayAs: now) {
+                today.append(definition)
+            } else if date > now, weekCalendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+                laterThisWeek.append(definition)
+            } else {
+                future.append(definition)
+            }
+        }
+
+        return [
+            AlertListSection(title: "Today", definitions: today),
+            AlertListSection(title: "Later this week", definitions: laterThisWeek),
+            AlertListSection(title: "Future", definitions: future),
+            AlertListSection(title: "Past", definitions: pastDefinitions(from: definitions, relativeTo: now))
+        ].filter { !$0.definitions.isEmpty }
     }
 
     static func futureDefinitions(

@@ -46,6 +46,33 @@ final class AlertMeUITests: XCTestCase {
     }
 
     @MainActor
+    func testOnlyPopulatedAlertSectionsAppear() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+
+        app.buttons["createFirstAlertButton"].click()
+        let editor = app.descendants(matching: .textView)["messageEditor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 2))
+        editor.click()
+        editor.typeText("Distant appointment")
+        replaceValue(in: app.textFields["alertDateField"], with: "01/01/2099")
+        replaceValue(in: app.textFields["alertTimeField"], with: "12:00")
+        app.buttons["saveAlertButton"].click()
+
+        XCTAssertTrue(app.staticTexts["Distant appointment"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Future"].exists)
+        XCTAssertFalse(app.staticTexts["Today"].exists)
+        XCTAssertFalse(app.staticTexts["Later this week"].exists)
+        XCTAssertFalse(app.staticTexts["Past"].exists)
+        XCTAssertFalse(app.staticTexts["No past alerts"].exists)
+
+        app.buttons["Delete"].click()
+        XCTAssertTrue(app.staticTexts["No alerts"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Future"].exists)
+    }
+
+    @MainActor
     func testRecurrenceSpecificDateControls() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]

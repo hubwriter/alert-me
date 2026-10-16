@@ -51,17 +51,15 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        alertSection(
-                            title: "Future",
-                            definitions: appState.futureDefinitions,
-                            emptyMessage: "No future alerts"
-                        )
-                        alertSection(
-                            title: "Past",
-                            definitions: appState.pastDefinitions,
-                            emptyMessage: "No past alerts"
-                        )
+                    TimelineView(.everyMinute) { timeline in
+                        LazyVStack(spacing: 0) {
+                            ForEach(appState.listSections(relativeTo: timeline.date)) { section in
+                                alertSection(
+                                    title: section.title,
+                                    definitions: section.definitions
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -94,8 +92,7 @@ struct ContentView: View {
     @ViewBuilder
     private func alertSection(
         title: String,
-        definitions: [AlertDefinition],
-        emptyMessage: String
+        definitions: [AlertDefinition]
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
@@ -109,33 +106,26 @@ struct ContentView: View {
             Divider()
                 .padding(.horizontal, 32)
 
-            if definitions.isEmpty {
-                Text(emptyMessage)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 16)
-            } else {
-                ForEach(Array(definitions.enumerated()), id: \.element.id) { index, definition in
-                    AlertRow(
-                        definition: definition,
-                        onEdit: {
-                            editor = AlertEditorContext(definition: definition)
-                        },
-                        onDelete: {
-                            appState.delete(definition)
-                        },
-                        onEnabledChange: {
-                            appState.setEnabled(definition, enabled: $0)
-                        }
-                    )
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 8)
-
-                    if index < definitions.count - 1 {
-                        Divider()
-                            .padding(.leading, 112)
-                            .padding(.trailing, 32)
+            ForEach(Array(definitions.enumerated()), id: \.element.id) { index, definition in
+                AlertRow(
+                    definition: definition,
+                    onEdit: {
+                        editor = AlertEditorContext(definition: definition)
+                    },
+                    onDelete: {
+                        appState.delete(definition)
+                    },
+                    onEnabledChange: {
+                        appState.setEnabled(definition, enabled: $0)
                     }
+                )
+                .padding(.horizontal, 32)
+                .padding(.vertical, 8)
+
+                if index < definitions.count - 1 {
+                    Divider()
+                        .padding(.leading, 112)
+                        .padding(.trailing, 32)
                 }
             }
         }
