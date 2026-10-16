@@ -49,4 +49,29 @@ struct AlertDraftTests {
         #expect(snapshot.oneTimeDate.map { calendar.component(.second, from: $0) } == 0)
         #expect(calendar.component(.second, from: snapshot.startDate) == 0)
     }
+
+    @Test
+    @MainActor
+    func endDateDefaultsToNoneAndSurvivesEditing() {
+        let now = Date()
+        #expect(AlertDraft(now: now).endDate == nil)
+        let endDate = now.addingTimeInterval(86_400)
+        let definition = AlertDefinition(
+            message: "Daily",
+            recurrence: .daily,
+            oneTimeDate: nil,
+            startDate: now,
+            hour: 9,
+            minute: 0,
+            weekdayMask: 0,
+            monthDay: 1,
+            month: 1,
+            endDate: endDate
+        )
+
+        let draft = AlertDraft(definition: definition)
+
+        #expect(draft.endDate == endDate)
+        #expect(draft.snapshot().endDate == Calendar.current.startOfDay(for: endDate))
+    }
 }

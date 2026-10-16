@@ -54,6 +54,56 @@ struct AlertAppStateSortingTests {
         #expect(ordered.map(\.message) == ["Recent", "Older"])
     }
 
+    @Test
+    func completedRecurrenceMovesToPastBeforeCutoffDayPasses() throws {
+        let calendar = Calendar.current
+        let occurrence = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 9))
+        )
+        let definition = makeDefinition(message: "Monthly", recurrence: .monthly, date: occurrence)
+        definition.hour = 9
+        definition.monthDay = 10
+        definition.endDate = calendar.date(from: DateComponents(year: 2026, month: 6, day: 30))
+        definition.nextOccurrenceAt = occurrence
+
+        let before = occurrence.addingTimeInterval(-1)
+        #expect(AlertAppState.futureDefinitions(from: [definition], relativeTo: before).count == 1)
+        #expect(AlertAppState.pastDefinitions(from: [definition], relativeTo: before).isEmpty)
+
+        definition.lastHandledOccurrence = occurrence
+        definition.nextOccurrenceAt = nil
+        let after = occurrence.addingTimeInterval(1)
+        #expect(AlertAppState.futureDefinitions(from: [definition], relativeTo: after).isEmpty)
+        #expect(AlertAppState.pastDefinitions(from: [definition], relativeTo: after).count == 1)
+    }
+
+    @Test
+    func completedRecurrencesSortByFinalTriggerAndUnlimitedAlertsStayFuture() throws {
+        let calendar = Calendar.current
+        let recentDate = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 9))
+        )
+        let olderDate = recentDate.addingTimeInterval(-86_400)
+        let recent = makeDefinition(message: "Recent", recurrence: .daily, date: recentDate)
+        let older = makeDefinition(message: "Older", recurrence: .daily, date: olderDate)
+        let unlimited = makeDefinition(message: "Unlimited", recurrence: .daily, date: olderDate)
+        let disabled = makeDefinition(message: "Disabled", recurrence: .daily, date: olderDate)
+        for definition in [recent, older, disabled] {
+            definition.hour = 9
+            definition.endDate = calendar.startOfDay(for: definition.startDate)
+        }
+        recent.lastHandledOccurrence = recentDate
+        older.lastHandledOccurrence = olderDate
+        disabled.isEnabled = false
+        let now = recentDate.addingTimeInterval(1)
+
+        #expect(AlertAppState.pastDefinitions(
+            from: [older, recent], relativeTo: now
+        ).map(\.message) == ["Recent", "Older"])
+        #expect(AlertAppState.futureDefinitions(from: [unlimited], relativeTo: now).count == 1)
+        #expect(AlertAppState.pastDefinitions(from: [disabled], relativeTo: now).count == 1)
+    }
+
     private func makeDefinition(
         message: String,
         recurrence: RecurrenceKind,

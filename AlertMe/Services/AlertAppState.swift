@@ -74,6 +74,7 @@ final class AlertAppState: NSObject, ObservableObject {
             weekdayMask: snapshot.weekdayMask,
             monthDay: snapshot.monthDay,
             month: snapshot.month,
+            endDate: snapshot.endDate,
             isEnabled: draft.isEnabled,
             isSilent: draft.isSilent,
             createdAt: now,
@@ -94,6 +95,7 @@ final class AlertAppState: NSObject, ObservableObject {
         definition.weekdayMask = snapshot.weekdayMask
         definition.monthDay = snapshot.monthDay
         definition.month = snapshot.month
+        definition.endDate = snapshot.endDate
         definition.isEnabled = draft.isEnabled
         definition.isSilent = draft.isSilent
         definition.updatedAt = Date()
@@ -176,9 +178,7 @@ final class AlertAppState: NSObject, ObservableObject {
         relativeTo now: Date
     ) -> [AlertDefinition] {
         definitions
-            .filter {
-                $0.recurrence != .oneTime || ($0.oneTimeDate ?? .distantPast) > now
-            }
+            .filter { !isPast($0, relativeTo: now) }
             .sorted(by: Self.futureDisplayOrder)
     }
 
@@ -187,10 +187,22 @@ final class AlertAppState: NSObject, ObservableObject {
         relativeTo now: Date
     ) -> [AlertDefinition] {
         definitions
-            .filter {
-                $0.recurrence == .oneTime && ($0.oneTimeDate ?? .distantPast) <= now
-            }
+            .filter { isPast($0, relativeTo: now) }
             .sorted(by: Self.pastDisplayOrder)
+    }
+
+    private static func isPast(_ definition: AlertDefinition, relativeTo now: Date) -> Bool {
+        if definition.recurrence == .oneTime {
+            return (definition.oneTimeDate ?? .distantPast) <= now
+        }
+        guard definition.endDate != nil else {
+            return false
+        }
+        return RecurrenceCalculator().nextOccurrence(
+            after: max(now, definition.lastHandledOccurrence ?? .distantPast),
+            schedule: definition.scheduleSnapshot,
+            calendar: .current
+        ) == nil
     }
 
     private func saveAndReconcile(removingPendingNotification identifier: String? = nil) {
@@ -222,9 +234,8 @@ final class AlertAppState: NSObject, ObservableObject {
         }
     }
 
-    private func reconcile(markElapsedAsMissed: Bool) async {
+    func reconcile(markElapsedAsMissed: Bool, now: Date = Date()) async {
         refreshDefinitions()
-        let now = Date()
 
         for definition in definitions {
             advance(definition, now: now, markElapsedAsMissed: markElapsedAsMissed)
@@ -340,9 +351,8 @@ final class AlertAppState: NSObject, ObservableObject {
         }
     }
 
-    private func handleTimer() async {
+    func handleTimer(now: Date = Date()) async {
         refreshDefinitions()
-        let now = Date()
         let dueDefinitions = definitions
             .filter {
                 $0.isEnabled
@@ -397,7 +407,7 @@ final class AlertAppState: NSObject, ObservableObject {
         } catch {
             lastError = error.localizedDescription
         }
-        await reconcile(markElapsedAsMissed: false)
+        await reconcile(markElapsedAsMissed: false, now: now)
     }
 
     private func recordDismissal(_ alert: DueAlert) {
@@ -518,7 +528,10 @@ final class AlertAppState: NSObject, ObservableObject {
         if definition.recurrence == .oneTime {
             return definition.oneTimeDate ?? .distantFuture
         }
-        return definition.nextOccurrenceAt ?? .distantFuture
+        return definition.nextOccurrenceAt
+            ?? definition.lastHandledOccurrence
+            ?? definition.endDate
+            ?? .distantFuture
     }
 }
 

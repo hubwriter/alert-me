@@ -48,6 +48,7 @@ final class AlertDefinition {
     var missedCount: Int
     var nextOccurrenceAt: Date?
     var lastDismissedAt: Date?
+    var endDate: Date?
 
     init(
         id: UUID = UUID(),
@@ -60,6 +61,7 @@ final class AlertDefinition {
         weekdayMask: Int,
         monthDay: Int,
         month: Int,
+        endDate: Date? = nil,
         isEnabled: Bool = true,
         isSilent: Bool = false,
         createdAt: Date = Date(),
@@ -75,6 +77,7 @@ final class AlertDefinition {
         self.weekdayMask = weekdayMask
         self.monthDay = monthDay
         self.month = month
+        self.endDate = endDate
         self.isEnabled = isEnabled
         self.isSilent = isSilent
         self.createdAt = createdAt
@@ -102,7 +105,8 @@ final class AlertDefinition {
             minute: minute,
             weekdayMask: weekdayMask,
             monthDay: monthDay,
-            month: month
+            month: month,
+            endDate: endDate
         )
     }
 }

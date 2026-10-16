@@ -10,6 +10,7 @@ struct AlertScheduleSnapshot: Equatable, Sendable {
     let weekdayMask: Int
     let monthDay: Int
     let month: Int
+    var endDate: Date? = nil
 }
 
 struct RecurrenceCalculator: Sendable {
@@ -20,6 +21,7 @@ struct RecurrenceCalculator: Sendable {
     ) -> Date? {
         let normalizedStartDate = startOfMinute(schedule.startDate, calendar: calendar)
 
+        let occurrence: Date?
         switch schedule.recurrence {
         case .oneTime:
             guard let oneTimeDate = schedule.oneTimeDate.map({
@@ -29,34 +31,43 @@ struct RecurrenceCalculator: Sendable {
             }
             return oneTimeDate
         case .daily:
-            return nextDaily(
+            occurrence = nextDaily(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         case .weekly:
-            return nextWeekly(
+            occurrence = nextWeekly(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         case .monthly:
-            return nextMonthly(
+            occurrence = nextMonthly(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         case .yearly:
-            return nextYearly(
+            occurrence = nextYearly(
                 after: date,
                 schedule: schedule,
                 startDate: normalizedStartDate,
                 calendar: calendar
             )
         }
+
+        guard let occurrence else {
+            return nil
+        }
+        if let endDate = schedule.endDate,
+           calendar.startOfDay(for: occurrence) > calendar.startOfDay(for: endDate) {
+            return nil
+        }
+        return occurrence
     }
 
     private func nextDaily(

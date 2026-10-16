@@ -127,6 +127,77 @@ struct RecurrenceCalculatorTests {
         #expect(next == expected)
     }
 
+    @Test(arguments: [RecurrenceKind.daily, .weekly, .monthly, .yearly])
+    func endDateIncludesFinalDayAndStopsFollowingOccurrence(recurrence: RecurrenceKind) throws {
+        let calendar = utcCalendar()
+        let start = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 16, hour: 9))
+        )
+        var schedule = makeSchedule(
+            recurrence: recurrence,
+            startDate: start,
+            hour: 9,
+            weekdayMask: WeekdayMask.value(for: calendar.component(.weekday, from: start)),
+            monthDay: 16,
+            month: 6
+        )
+        schedule.endDate = calendar.startOfDay(for: start)
+
+        #expect(calculator.nextOccurrence(
+            after: start.addingTimeInterval(-1), schedule: schedule, calendar: calendar
+        ) == start)
+        #expect(calculator.nextOccurrence(
+            after: start, schedule: schedule, calendar: calendar
+        ) == nil)
+    }
+
+    @Test
+    func endDateBetweenOccurrencesDoesNotAddExtraAlert() throws {
+        let calendar = utcCalendar()
+        let start = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 9, day: 10, hour: 9))
+        )
+        var schedule = makeSchedule(recurrence: .monthly, startDate: start, hour: 9, monthDay: 10)
+        schedule.endDate = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 10, day: 9))
+        )
+
+        #expect(calculator.nextOccurrence(after: start, schedule: schedule, calendar: calendar) == nil)
+    }
+
+    @Test
+    func cutoffUsesLocalCalendarDayAcrossDaylightSavingChange() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let start = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: 1))
+        )
+        var schedule = makeSchedule(recurrence: .daily, startDate: start, hour: 23, minute: 30)
+        schedule.endDate = start
+        let final = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 23, minute: 30))
+        )
+
+        #expect(calculator.nextOccurrence(after: start, schedule: schedule, calendar: calendar) == final)
+        #expect(calculator.nextOccurrence(after: final, schedule: schedule, calendar: calendar) == nil)
+    }
+
+    @Test
+    func leapDayAfterCutoffIsNotScheduled() throws {
+        let calendar = utcCalendar()
+        let start = try #require(
+            calendar.date(from: DateComponents(year: 2025, month: 3, day: 1))
+        )
+        var schedule = makeSchedule(
+            recurrence: .yearly, startDate: start, hour: 8, monthDay: 29, month: 2
+        )
+        schedule.endDate = try #require(
+            calendar.date(from: DateComponents(year: 2028, month: 2, day: 28))
+        )
+
+        #expect(calculator.nextOccurrence(after: start, schedule: schedule, calendar: calendar) == nil)
+    }
+
     private func makeSchedule(
         recurrence: RecurrenceKind,
         oneTimeDate: Date? = nil,

@@ -83,6 +83,16 @@ private struct AlertCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Alert Me") {
+                AppActivationPolicy.prepareToShowWindow()
+                NSApplication.shared.orderFrontStandardAboutPanel(options: [
+                    .credits: NSAttributedString(string: "Released October 16, 2026")
+                ])
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }
+        }
+
         CommandGroup(replacing: .newItem) {
             Button("New Alert") {
                 AppActivationPolicy.prepareToShowWindow()

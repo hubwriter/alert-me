@@ -7,6 +7,7 @@ struct AlertDraft: Equatable, Sendable {
     var weekdayMask: Int
     var isEnabled = true
     var isSilent = false
+    var endDate: Date?
 
     init(now: Date = Date(), calendar: Calendar = .current) {
         let proposedDate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
@@ -22,6 +23,7 @@ struct AlertDraft: Equatable, Sendable {
         weekdayMask = definition.weekdayMask
         isEnabled = definition.isEnabled
         isSilent = definition.isSilent
+        endDate = definition.endDate
     }
 
     func snapshot(id: UUID = UUID(), calendar: Calendar = .current) -> AlertScheduleSnapshot {
@@ -39,7 +41,8 @@ struct AlertDraft: Equatable, Sendable {
             minute: components.minute ?? 0,
             weekdayMask: weekdayMask,
             monthDay: components.day ?? 1,
-            month: components.month ?? 1
+            month: components.month ?? 1,
+            endDate: recurrence == .oneTime ? nil : endDate.map { calendar.startOfDay(for: $0) }
         )
     }
 }
