@@ -52,6 +52,7 @@ struct AlertEditorView: View {
             AlertDateTimeControls(
                 selection: $draft.scheduledDate,
                 weekdayMask: $draft.weekdayMask,
+                isWeekdaysOnly: $draft.isWeekdaysOnly,
                 recurrence: draft.recurrence
             )
 

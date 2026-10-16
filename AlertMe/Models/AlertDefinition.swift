@@ -76,6 +76,7 @@ final class AlertDefinition {
     var hour: Int
     var minute: Int
     var weekdayMask: Int
+    var isWeekdaysOnly: Bool = false
     var monthDay: Int
     var month: Int
     var isEnabled: Bool
@@ -105,6 +106,7 @@ final class AlertDefinition {
         month: Int,
         endDate: Date? = nil,
         endDateCalendarDay: CalendarDate? = nil,
+        isWeekdaysOnly: Bool = false,
         isEnabled: Bool = true,
         isSilent: Bool = false,
         createdAt: Date = Date(),
@@ -124,6 +126,7 @@ final class AlertDefinition {
         endDateYear = endDateCalendarDay?.year
         endDateMonth = endDateCalendarDay?.month
         endDateDay = endDateCalendarDay?.day
+        self.isWeekdaysOnly = isWeekdaysOnly
         self.isEnabled = isEnabled
         self.isSilent = isSilent
         self.createdAt = createdAt
@@ -157,6 +160,7 @@ final class AlertDefinition {
             hour: hour,
             minute: minute,
             weekdayMask: weekdayMask,
+            isWeekdaysOnly: isWeekdaysOnly,
             monthDay: monthDay,
             month: month,
             endDate: endDate,

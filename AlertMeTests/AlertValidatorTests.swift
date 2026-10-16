@@ -81,4 +81,30 @@ struct AlertValidatorTests {
         #expect(draft.snapshot().endDate == nil)
         #expect(AlertValidator().validate(draft, now: now).isValid)
     }
+
+    @Test
+    func weekdayMinimumEndDateSkipsWeekendDespiteEarlierCutoff() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let friday = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 16, hour: 10)
+        ))
+        let monday = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 19)
+        ))
+        var draft = AlertDraft(now: friday, calendar: calendar)
+        draft.message = "Weekday reminder"
+        draft.recurrence = .daily
+        draft.scheduledDate = try #require(calendar.date(
+            from: DateComponents(year: 2026, month: 10, day: 16, hour: 9)
+        ))
+        draft.endDateCalendarDay = CalendarDate(year: 2026, month: 10, day: 18)
+        let validator = AlertValidator()
+
+        #expect(validator.minimumEndDate(for: draft, now: friday, calendar: calendar) == monday)
+        #expect(validator.validate(draft, now: friday, calendar: calendar).endDateError != nil)
+
+        draft.endDateCalendarDay = CalendarDate(year: 2026, month: 10, day: 19)
+        #expect(validator.validate(draft, now: friday, calendar: calendar).isValid)
+    }
 }

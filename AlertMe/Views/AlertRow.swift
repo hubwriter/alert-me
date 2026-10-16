@@ -68,7 +68,8 @@ struct AlertRow: View {
             }
             return "\(AlertDisplayDateFormatter.dateString(from: date)) at \(formatter.string(from: date))"
         case .daily:
-            return "Every day at \(timeString(formatter))"
+            let days = definition.isWeekdaysOnly ? "Weekdays" : "Every day"
+            return "\(days) at \(timeString(formatter))"
         case .weekly:
             let weekdays = Calendar.current.weekdaySymbols.enumerated().compactMap { index, name in
                 WeekdayMask.contains(definition.weekdayMask, calendarWeekday: index + 1)
