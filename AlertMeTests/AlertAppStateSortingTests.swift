@@ -59,6 +59,7 @@ struct AlertAppStateSortingTests {
         let calendar = calendar()
         let now = try date(day: 16, hour: 12, calendar: calendar)
         let definitions = try [
+            ("Next Sunday", 25, 23, 59),
             ("Next week", 19, 0, 0),
             ("Older", 15, 12, 0),
             ("Tonight", 16, 23, 59),
@@ -82,11 +83,12 @@ struct AlertAppStateSortingTests {
             calendar: calendar
         )
 
-        #expect(sections.map(\.title) == ["Today", "Later this week", "Future", "Past"])
+        #expect(sections.map(\.title) == ["Today", "Later this week", "Next week", "Future", "Past"])
         #expect(sections.map { $0.definitions.map(\.message) } == [
             ["Soon", "Tonight"],
             ["Tomorrow", "Sunday"],
-            ["Next week", "Distant"],
+            ["Next week", "Next Sunday"],
+            ["Distant"],
             ["Now", "Earlier today", "Older"]
         ])
     }
@@ -113,9 +115,78 @@ struct AlertAppStateSortingTests {
             calendar: calendar
         )
 
-        #expect(sections.map(\.title) == [day == 25 ? "Today" : "Later this week", "Future"])
+        #expect(sections.map(\.title) == [day == 25 ? "Today" : "Later this week", "Next week"])
         #expect(sections.map { $0.definitions.map(\.message) } == [
             ["Sunday night"], ["Monday midnight"]
+        ])
+    }
+
+    @Test(arguments: [(2026, 3, 23), (2026, 10, 19), (2026, 12, 28)], [1, 2])
+    func nextWeekIncludesExactlyMondayThroughSundayAcrossCalendarTransitions(
+        mondayComponents: (Int, Int, Int),
+        firstWeekday: Int
+    ) throws {
+        var calendar = calendar(timeZone: "Europe/London")
+        calendar.firstWeekday = firstWeekday
+        let (year, month, day) = mondayComponents
+        let monday = try #require(calendar.date(from: DateComponents(year: year, month: month, day: day)))
+        let followingMonday = try #require(calendar.date(byAdding: .day, value: 7, to: monday))
+        let now = try #require(calendar.date(byAdding: .day, value: -3, to: monday))
+        let definitions = [
+            ("Following Monday", followingMonday),
+            ("Sunday night", followingMonday.addingTimeInterval(-1)),
+            ("Monday midnight", monday),
+            ("Before next week", monday.addingTimeInterval(-1))
+        ].map { message, date in
+            makeDefinition(message: message, recurrence: .oneTime, date: date)
+        }
+
+        let sections = AlertAppState.listSections(
+            from: definitions,
+            relativeTo: now,
+            calendar: calendar
+        )
+
+        #expect(sections.map(\.title) == ["Later this week", "Next week", "Future"])
+        #expect(sections.map { $0.definitions.map(\.message) } == [
+            ["Before next week"], ["Monday midnight", "Sunday night"], ["Following Monday"]
+        ])
+    }
+
+    @Test(arguments: ["America/Los_Angeles", "Europe/London", "Asia/Tokyo"])
+    func nextWeekSectionsRefreshAtLocalMondayMidnight(timeZone: String) throws {
+        let calendar = calendar(timeZone: timeZone)
+        let monday = try date(day: 19, calendar: calendar)
+        let definitions = try [
+            ("Monday morning", 19, 9),
+            ("Sunday", 25, 12),
+            ("Following Monday", 26, 12)
+        ].map { message, day, hour in
+            makeDefinition(
+                message: message,
+                recurrence: .oneTime,
+                date: try date(day: day, hour: hour, calendar: calendar)
+            )
+        }
+
+        let before = AlertAppState.listSections(
+            from: definitions,
+            relativeTo: monday.addingTimeInterval(-1),
+            calendar: calendar
+        )
+        let after = AlertAppState.listSections(
+            from: definitions,
+            relativeTo: monday,
+            calendar: calendar
+        )
+
+        #expect(before.map(\.title) == ["Next week", "Future"])
+        #expect(before.map { $0.definitions.map(\.message) } == [
+            ["Monday morning", "Sunday"], ["Following Monday"]
+        ])
+        #expect(after.map(\.title) == ["Today", "Later this week", "Next week"])
+        #expect(after.map { $0.definitions.map(\.message) } == [
+            ["Monday morning"], ["Sunday"], ["Following Monday"]
         ])
     }
 
@@ -162,7 +233,7 @@ struct AlertAppStateSortingTests {
             calendar: calendar
         )
 
-        #expect(sections.map(\.title) == ["Later this week", "Future"])
+        #expect(sections.map(\.title) == ["Later this week", "Next week"])
         #expect(sections.map { $0.definitions.map(\.message) } == [["Sunday"], ["Monday"]])
     }
 
@@ -178,6 +249,10 @@ struct AlertAppStateSortingTests {
         weekly.isEnabled = false
         let yearly = makeDefinition(message: "Yearly", recurrence: .yearly, date: start)
         yearly.nextOccurrenceAt = try date(day: 26, calendar: calendar)
+        let monthly = makeDefinition(message: "Monthly", recurrence: .monthly, date: start)
+        monthly.monthDay = 21
+        monthly.isEnabled = false
+        monthly.nextOccurrenceAt = start
         let unscheduled = makeDefinition(message: "Unscheduled", recurrence: .monthly, date: start)
         let disabled = makeDefinition(
             message: "Disabled",
@@ -187,14 +262,14 @@ struct AlertAppStateSortingTests {
         disabled.isEnabled = false
 
         let sections = AlertAppState.listSections(
-            from: [unscheduled, yearly, weekly, disabled, daily],
+            from: [unscheduled, yearly, weekly, disabled, daily, monthly],
             relativeTo: now,
             calendar: calendar
         )
 
-        #expect(sections.map(\.title) == ["Today", "Later this week", "Future"])
+        #expect(sections.map(\.title) == ["Today", "Later this week", "Next week", "Future"])
         #expect(sections.map { $0.definitions.map(\.message) } == [
-            ["Daily", "Disabled"], ["Weekly"], ["Yearly", "Unscheduled"]
+            ["Daily", "Disabled"], ["Weekly"], ["Monthly"], ["Yearly", "Unscheduled"]
         ])
     }
 

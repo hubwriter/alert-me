@@ -12,7 +12,7 @@ final class AlertMeUITests: XCTestCase {
         app.menuItems["About Alert Me"].click()
 
         let version = app.staticTexts.matching(NSPredicate(
-            format: "value CONTAINS %@ OR label CONTAINS %@", "1.4", "1.4"
+            format: "value CONTAINS %@ OR label CONTAINS %@", "1.6", "1.6"
         )).firstMatch
         XCTAssertTrue(version.waitForExistence(timeout: 2))
         let releaseDate = app.descendants(matching: .any).matching(NSPredicate(
@@ -67,10 +67,11 @@ final class AlertMeUITests: XCTestCase {
     }
 
     @MainActor
-    func testOnlyPopulatedAlertSectionsAppear() {
+    func testOnlyPopulatedAlertSectionsAppear() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         app.launch()
+        app.activate()
 
         app.buttons["createFirstAlertButton"].click()
         let editor = app.descendants(matching: .textView)["messageEditor"]
@@ -85,11 +86,32 @@ final class AlertMeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Future"].exists)
         XCTAssertFalse(app.staticTexts["Today"].exists)
         XCTAssertFalse(app.staticTexts["Later this week"].exists)
+        XCTAssertFalse(app.staticTexts["Next week"].exists)
         XCTAssertFalse(app.staticTexts["Past"].exists)
         XCTAssertFalse(app.staticTexts["No past alerts"].exists)
 
+        let nextMonday = try XCTUnwrap(Calendar.current.nextDate(
+            after: Date(),
+            matching: DateComponents(hour: 0, minute: 0, second: 0, weekday: 2),
+            matchingPolicy: .nextTime
+        ))
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "dd/MM/yyyy"
+        app.buttons["Edit"].click()
+        XCTAssertTrue(app.textFields["alertDateField"].waitForExistence(timeout: 2))
+        replaceValue(in: app.textFields["alertDateField"], with: formatter.string(from: nextMonday))
+        app.buttons["saveAlertButton"].click()
+
+        XCTAssertTrue(app.staticTexts["Next week"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Today"].exists)
+        XCTAssertFalse(app.staticTexts["Later this week"].exists)
+        XCTAssertFalse(app.staticTexts["Future"].exists)
+        XCTAssertFalse(app.staticTexts["Past"].exists)
+
         app.buttons["Delete"].click()
         XCTAssertTrue(app.staticTexts["No alerts"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Next week"].exists)
         XCTAssertFalse(app.staticTexts["Future"].exists)
     }
 

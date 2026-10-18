@@ -197,8 +197,10 @@ final class AlertAppState: NSObject, ObservableObject {
     ) -> [AlertListSection] {
         var weekCalendar = calendar
         weekCalendar.firstWeekday = 2
+        let nextWeekStart = weekCalendar.dateInterval(of: .weekOfYear, for: now)?.end
         var today: [AlertDefinition] = []
         var laterThisWeek: [AlertDefinition] = []
+        var nextWeek: [AlertDefinition] = []
         var future: [AlertDefinition] = []
 
         for definition in futureDefinitions(from: definitions, relativeTo: now, calendar: calendar) {
@@ -207,6 +209,9 @@ final class AlertAppState: NSObject, ObservableObject {
                 today.append(definition)
             } else if date > now, weekCalendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
                 laterThisWeek.append(definition)
+            } else if let nextWeekStart,
+                      weekCalendar.isDate(date, equalTo: nextWeekStart, toGranularity: .weekOfYear) {
+                nextWeek.append(definition)
             } else {
                 future.append(definition)
             }
@@ -215,6 +220,7 @@ final class AlertAppState: NSObject, ObservableObject {
         return [
             AlertListSection(title: "Today", definitions: today),
             AlertListSection(title: "Later this week", definitions: laterThisWeek),
+            AlertListSection(title: "Next week", definitions: nextWeek),
             AlertListSection(title: "Future", definitions: future),
             AlertListSection(title: "Past", definitions: pastDefinitions(from: definitions, relativeTo: now))
         ].filter { !$0.definitions.isEmpty }

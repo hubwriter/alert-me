@@ -42,110 +42,61 @@ for size in sizes {
         yRadius: scaled(220, for: size)
     )
     let gradient = NSGradient(
-        starting: NSColor(red: 0.08, green: 0.34, blue: 0.91, alpha: 1),
-        ending: NSColor(red: 0.10, green: 0.78, blue: 0.86, alpha: 1)
+        starting: NSColor(red: 0.53, green: 0.02, blue: 0.10, alpha: 1),
+        ending: NSColor(red: 0.39, green: 0.00, blue: 0.055, alpha: 1)
     )!
     gradient.draw(in: background, angle: -55)
 
-    NSGraphicsContext.saveGraphicsState()
-    let shadow = NSShadow()
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.24)
-    shadow.shadowBlurRadius = scaled(28, for: size)
-    shadow.shadowOffset = NSSize(width: 0, height: scaled(-14, for: size))
-    shadow.set()
+    NSColor.white.setFill()
+    NSColor.white.setStroke()
 
-    let leftBell = NSBezierPath(
-        roundedRect: NSRect(
-            x: scaled(190, for: size),
-            y: scaled(700, for: size),
-            width: scaled(220, for: size),
-            height: scaled(150, for: size)
-        ),
-        xRadius: scaled(75, for: size),
-        yRadius: scaled(75, for: size)
-    )
+    for (centerX, angle): (CGFloat, CGFloat) in [(352, 45), (672, -45)] {
+        let bell = NSBezierPath()
+        bell.appendArc(
+            withCenter: .zero,
+            radius: scaled(80, for: size),
+            startAngle: 0,
+            endAngle: 180
+        )
+        bell.close()
+        var transform = AffineTransform()
+        transform.translate(x: scaled(centerX, for: size), y: scaled(704, for: size))
+        transform.rotate(byDegrees: angle)
+        bell.transform(using: transform)
+        bell.lineWidth = scaled(10, for: size)
+        bell.lineJoinStyle = .round
+        bell.fill()
+        bell.stroke()
+    }
 
-    let rightBell = NSBezierPath(
-        roundedRect: NSRect(
-            x: scaled(614, for: size),
-            y: scaled(700, for: size),
-            width: scaled(220, for: size),
-            height: scaled(150, for: size)
-        ),
-        xRadius: scaled(75, for: size),
-        yRadius: scaled(75, for: size)
-    )
-
-    let coral = NSColor(red: 1.0, green: 0.35, blue: 0.22, alpha: 1)
-    coral.setFill()
-    leftBell.fill()
-    rightBell.fill()
-
-    let clockBody = NSBezierPath(
+    let clock = NSBezierPath(
         ovalIn: NSRect(
-            x: scaled(180, for: size),
-            y: scaled(170, for: size),
-            width: scaled(664, for: size),
-            height: scaled(664, for: size)
+            x: scaled(290, for: size),
+            y: scaled(278, for: size),
+            width: scaled(444, for: size),
+            height: scaled(444, for: size)
         )
     )
-    coral.setFill()
-    clockBody.fill()
-    NSGraphicsContext.restoreGraphicsState()
-
-    let face = NSBezierPath(
-        ovalIn: NSRect(
-            x: scaled(252, for: size),
-            y: scaled(242, for: size),
-            width: scaled(520, for: size),
-            height: scaled(520, for: size)
-        )
-    )
-    NSColor(red: 1.0, green: 0.96, blue: 0.82, alpha: 1).setFill()
-    face.fill()
+    clock.lineWidth = max(1, scaled(42, for: size))
+    clock.stroke()
 
     let feet = NSBezierPath()
-    feet.lineWidth = scaled(58, for: size)
+    feet.lineWidth = max(1, scaled(44, for: size))
     feet.lineCapStyle = .round
-    feet.move(to: NSPoint(x: scaled(330, for: size), y: scaled(230, for: size)))
-    feet.line(to: NSPoint(x: scaled(250, for: size), y: scaled(125, for: size)))
-    feet.move(to: NSPoint(x: scaled(694, for: size), y: scaled(230, for: size)))
-    feet.line(to: NSPoint(x: scaled(774, for: size), y: scaled(125, for: size)))
-    coral.setStroke()
+    feet.move(to: NSPoint(x: scaled(350, for: size), y: scaled(338, for: size)))
+    feet.line(to: NSPoint(x: scaled(312, for: size), y: scaled(264, for: size)))
+    feet.move(to: NSPoint(x: scaled(674, for: size), y: scaled(338, for: size)))
+    feet.line(to: NSPoint(x: scaled(712, for: size), y: scaled(264, for: size)))
     feet.stroke()
 
-    let topButton = NSBezierPath(
-        roundedRect: NSRect(
-            x: scaled(448, for: size),
-            y: scaled(814, for: size),
-            width: scaled(128, for: size),
-            height: scaled(48, for: size)
-        ),
-        xRadius: scaled(24, for: size),
-        yRadius: scaled(24, for: size)
-    )
-    NSColor(red: 1.0, green: 0.76, blue: 0.15, alpha: 1).setFill()
-    topButton.fill()
-
-    let paragraph = NSMutableParagraphStyle()
-    paragraph.alignment = .center
-    let attributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(
-            ofSize: scaled(360, for: size),
-            weight: .heavy
-        ),
-        .foregroundColor: NSColor(red: 0.04, green: 0.23, blue: 0.55, alpha: 1),
-        .paragraphStyle: paragraph
-    ]
-    NSString(string: "A").draw(
-        in: NSRect(
-            x: scaled(252, for: size),
-            y: scaled(300, for: size),
-            width: scaled(520, for: size),
-            height: scaled(410, for: size)
-        ),
-        withAttributes: attributes
-    )
+    let hands = NSBezierPath()
+    hands.lineWidth = max(1, scaled(42, for: size))
+    hands.lineCapStyle = .round
+    hands.lineJoinStyle = .round
+    hands.move(to: NSPoint(x: scaled(512, for: size), y: scaled(626, for: size)))
+    hands.line(to: NSPoint(x: scaled(512, for: size), y: scaled(500, for: size)))
+    hands.line(to: NSPoint(x: scaled(612, for: size), y: scaled(500, for: size)))
+    hands.stroke()
 
     NSGraphicsContext.restoreGraphicsState()
 
