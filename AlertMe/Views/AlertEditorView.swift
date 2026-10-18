@@ -16,7 +16,7 @@ struct AlertEditorView: View {
         let validation = AlertValidator().validate(draft, now: Date())
         let minimumEndDate = AlertValidator().minimumEndDate(for: draft, now: Date())
 
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(definition == nil ? "New Alert" : "Edit Alert")
                 .font(.title2.bold())
 
@@ -31,14 +31,14 @@ struct AlertEditorView: View {
 
                 TextEditor(text: $draft.message)
                     .font(.body)
-                    .frame(minHeight: 110)
+                    .frame(height: 130)
                     .padding(6)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
                     .accessibilityIdentifier("messageEditor")
 
-                if let error = validation.messageError {
-                    ValidationMessage(error)
-                }
+                ValidationMessage(validation.messageError ?? " ")
+                    .opacity(validation.messageError == nil ? 0 : 1)
+                    .accessibilityHidden(validation.messageError == nil)
             }
 
             Picker("Repeat", selection: $draft.recurrence) {
@@ -56,55 +56,63 @@ struct AlertEditorView: View {
                 recurrence: draft.recurrence
             )
 
-            if let error = validation.scheduleError {
-                ValidationMessage(error)
-            }
+            VStack(alignment: .leading, spacing: 10) {
+                if draft.recurrence == .oneTime, let error = validation.scheduleError {
+                    ValidationMessage(error)
+                }
 
-            Toggle("Play the alert sound", isOn: silentInvertedBinding)
-                .accessibilityIdentifier("soundToggle")
+                HStack {
+                    Toggle("Play the alert sound", isOn: silentInvertedBinding)
+                        .accessibilityIdentifier("soundToggle")
 
-            if definition != nil {
-                Toggle("Enabled", isOn: $draft.isEnabled)
-            }
-
-            if draft.recurrence != .oneTime {
-                VStack(alignment: .leading, spacing: 6) {
-                    AlertEndDateControls(
-                        endDate: $draft.endDate,
-                        minimumDate: minimumEndDate ?? Calendar.current.startOfDay(for: draft.scheduledDate)
-                    )
-                    if let error = validation.endDateError {
-                        ValidationMessage(error)
+                    Spacer()
+                    if definition != nil {
+                        Toggle("Enabled", isOn: $draft.isEnabled)
                     }
                 }
-            }
 
-            Spacer()
-
-            HStack {
-                Spacer()
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button("Save") {
-                    if let definition {
-                        appState.update(definition, with: draft)
-                    } else {
-                        appState.add(draft)
+                HStack(alignment: .bottom, spacing: 16) {
+                    if draft.recurrence != .oneTime {
+                        AlertEndDateControls(
+                            endDate: $draft.endDate,
+                            minimumDate: minimumEndDate ?? Calendar.current.startOfDay(for: draft.scheduledDate)
+                        )
                     }
-                    dismiss()
+                    Spacer(minLength: 0)
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        if draft.recurrence != .oneTime, let error = validation.scheduleError {
+                            ValidationMessage(error)
+                        }
+                        if let error = validation.endDateError {
+                            ValidationMessage(error)
+                        }
+                        HStack {
+                            Button("Cancel") {
+                                dismiss()
+                            }
+                            .keyboardShortcut(.cancelAction)
+
+                            Button("Save") {
+                                if let definition {
+                                    appState.update(definition, with: draft)
+                                } else {
+                                    appState.add(draft)
+                                }
+                                dismiss()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
+                            .disabled(!validation.isValid)
+                            .accessibilityIdentifier("saveAlertButton")
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!validation.isValid)
-                .accessibilityIdentifier("saveAlertButton")
+                .frame(maxHeight: .infinity, alignment: .bottom)
             }
         }
         .padding(24)
-        .frame(width: 560)
-        .frame(minHeight: 500)
+        .frame(width: 560, height: 460)
         .onChange(of: minimumEndDate) { _, minimumDate in
             if let minimumDate, let endDate = draft.endDate, endDate < minimumDate {
                 draft.endDate = minimumDate
