@@ -100,11 +100,11 @@ struct AlertRow: View {
         return Calendar.current.date(from: components).map(formatter.string(from:)) ?? ""
     }
 
-    private func outcomeDescription(_ outcome: AlertOutcome) -> String {
+    func outcomeDescription(_ outcome: AlertOutcome) -> String {
         switch outcome {
         case .scheduled: "Alerting"
-        case .dismissed: "Dismissed"
-        case .missed: "Missed"
+        case .dismissed: definition.recurrence == .oneTime ? "Dismissed" : "Last occurrence dismissed"
+        case .missed: definition.recurrence == .oneTime ? "Missed" : "Last occurrence missed"
         }
     }
 

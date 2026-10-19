@@ -87,7 +87,7 @@ private struct AlertCommands: Commands {
             Button("About Alert Me") {
                 AppActivationPolicy.prepareToShowWindow()
                 NSApplication.shared.orderFrontStandardAboutPanel(options: [
-                    .credits: NSAttributedString(string: "Released October 18, 2026")
+                    .credits: NSAttributedString(string: "Released October 19, 2026")
                 ])
                 NSApplication.shared.activate(ignoringOtherApps: true)
             }
