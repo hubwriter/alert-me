@@ -12,11 +12,11 @@ final class AlertMeUITests: XCTestCase {
         app.menuItems["About Alert Me"].click()
 
         let version = app.staticTexts.matching(NSPredicate(
-            format: "value CONTAINS %@ OR label CONTAINS %@", "1.6", "1.6"
+            format: "value CONTAINS %@ OR label CONTAINS %@", "1.7", "1.7"
         )).firstMatch
         XCTAssertTrue(version.waitForExistence(timeout: 2))
         let releaseDate = app.descendants(matching: .any).matching(NSPredicate(
-            format: "value == %@ OR label == %@", "Released October 18, 2026", "Released October 18, 2026"
+            format: "value == %@ OR label == %@", "Released October 19, 2026", "Released October 19, 2026"
         )).firstMatch
         XCTAssertTrue(releaseDate.waitForExistence(timeout: 2))
     }

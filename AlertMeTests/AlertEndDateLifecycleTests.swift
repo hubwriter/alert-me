@@ -58,6 +58,50 @@ struct AlertEndDateLifecycleTests {
     }
 
     @Test
+    func missedPreviousWeekdayDoesNotMarkTodaysFutureOccurrenceAsHandled() async throws {
+        let (state, scheduler, presenter) = try makeState()
+        let calendar = Calendar.current
+        let anchor = try #require(calendar.date(from: DateComponents(year: 2090, month: 1, day: 1)))
+        let friday = try #require(calendar.nextDate(
+            after: anchor,
+            matching: DateComponents(hour: 12, minute: 59, weekday: 6),
+            matchingPolicy: .nextTime
+        ))
+        let monday = try #require(calendar.date(byAdding: .day, value: 3, to: friday))
+        let now = try #require(calendar.date(bySettingHour: 11, minute: 9, second: 0, of: monday))
+        let definition = makeDefinition(recurrence: .daily, occurrence: friday)
+        definition.hour = 12
+        definition.minute = 59
+        definition.endDate = nil
+        definition.isWeekdaysOnly = true
+        state.modelContainer.mainContext.insert(definition)
+        try state.modelContainer.mainContext.save()
+        await state.refreshAuthorizationAfterReturningFromSettings()
+
+        await state.reconcile(markElapsedAsMissed: true, now: now)
+
+        let stored = try #require(state.definitions.first)
+        #expect(stored.lastOutcome == .missed)
+        #expect(stored.lastHandledOccurrence == friday)
+        #expect(stored.missedCount == 1)
+        #expect(stored.nextOccurrenceAt == monday)
+        #expect(stored.nextOccurrenceAt! > now)
+        #expect(presenter.alerts.isEmpty)
+        #expect(scheduler.descriptors.first?.deliveryDate == NotificationFallbackPolicy.deliveryDate(for: monday))
+        #expect(state.listSections(relativeTo: now).first?.title == "Today")
+        let row = AlertRow(definition: stored, onEdit: {}, onDelete: {}, onEnabledChange: { _ in })
+        #expect(row.outcomeDescription(.missed) == "Last occurrence missed")
+
+        await state.handleTimer(now: monday)
+
+        #expect(presenter.alerts.count == 1)
+        #expect(presenter.alerts.first?.occurrence == monday)
+        #expect(stored.lastOutcome == .scheduled)
+        #expect(stored.lastHandledOccurrence == monday)
+        #expect(stored.missedCount == 1)
+    }
+
+    @Test
     func addAndUpdatePersistOrRemoveEndDate() async throws {
         let (state, _, _) = try makeState()
         var draft = AlertDraft()

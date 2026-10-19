@@ -91,6 +91,8 @@ Sharing the app with other people requires a Developer ID signature and Apple no
 
 Missed alerts are recorded but are not replayed after the Mac wakes or the app reopens. Explicitly quitting or force-quitting Alert Me prevents popup alerts until it is opened again. Fallback notifications are delayed briefly and canceled when the app successfully presents its popup.
 
+For recurring alerts, **Last occurrence missed** and **Last occurrence dismissed** describe the previous occurrence, not the upcoming trigger shown in the list. A missed occurrence does not prevent the next scheduled alert from firing.
+
 ## Development
 
 Open `AlertMe.xcodeproj`, select the `AlertMe` scheme, and run the app.
